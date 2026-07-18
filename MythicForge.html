@@ -1,0 +1,1551 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MythicForge 神話工坊 — MythicMobs / MythicCrucible 編輯器</title>
+<style>
+:root{
+  --bg:#0f1115; --bg2:#161a22; --bg3:#1d2330; --bg4:#252c3d;
+  --border:#2c3444; --border2:#3a4358;
+  --fg:#dde3ee; --fg-dim:#8b93a7; --fg-faint:#5c6478;
+  --accent:#e8a33d; --accent2:#f5c169; --accent-dim:#7a5a28;
+  --green:#5fd68b; --red:#ef6b73; --blue:#6aa7ff; --purple:#b78aff; --cyan:#57c7d4;
+  --mono:'Cascadia Code','Consolas',monospace;
+  --sans:'Segoe UI','Microsoft JhengHei UI','Noto Sans TC',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:13px;background:var(--bg);border:1px solid var(--border);
+  color:var(--fg);border-radius:6px;padding:6px 9px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,163,61,.15)}
+input[type=number]{width:90px}
+textarea{font-family:var(--mono);line-height:1.55;resize:vertical}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== 版面 ===== */
+#app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--bg2);
+  border-bottom:1px solid var(--border);z-index:5}
+#topbar .logo{font-weight:700;font-size:16px;color:var(--accent);white-space:nowrap;letter-spacing:.5px}
+#topbar .logo small{color:var(--fg-dim);font-weight:400;margin-left:8px;font-size:12px}
+#main{display:grid;grid-template-columns:300px 1fr;min-height:0}
+#sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+#content{min-width:0;min-height:0;display:flex;flex-direction:column}
+
+/* ===== 按鈕 ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:7px;font-size:13px;
+  background:var(--bg3);border:1px solid var(--border);color:var(--fg);transition:.12s;white-space:nowrap}
+.btn:hover{background:var(--bg4);border-color:var(--border2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a1408;font-weight:600}
+.btn.primary:hover{background:var(--accent2)}
+.btn.danger:hover{background:#3c2226;border-color:var(--red);color:var(--red)}
+.btn.small{padding:4px 9px;font-size:12px;border-radius:6px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.icon-btn{padding:4px 7px;border-radius:5px;color:var(--fg-dim);font-size:13px}
+.icon-btn:hover{background:var(--bg4);color:var(--fg)}
+
+/* ===== 側欄 ===== */
+#cat-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)}
+#cat-tabs button{padding:10px 4px;font-size:12.5px;color:var(--fg-dim);border-bottom:2px solid transparent;transition:.12s}
+#cat-tabs button:hover{color:var(--fg);background:var(--bg3)}
+#cat-tabs button.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--bg3);font-weight:600}
+#cat-tabs button .cnt{display:block;font-size:10px;color:var(--fg-faint);margin-top:2px}
+#sidebar-tools{display:flex;gap:6px;padding:9px 10px;border-bottom:1px solid var(--border)}
+#search{flex:1;min-width:0;padding:6px 10px;border-radius:6px;font-size:12.5px}
+#tree{flex:1;overflow-y:auto;padding:6px 6px 30px}
+.tree-folder{margin-bottom:2px}
+.tree-folder>.hd{display:flex;align-items:center;gap:5px;padding:4px 6px;color:var(--fg-dim);font-size:12px;
+  cursor:pointer;border-radius:5px;user-select:none}
+.tree-folder>.hd:hover{background:var(--bg3)}
+.tree-file{margin-left:6px}
+.tree-file>.hd{display:flex;align-items:center;gap:5px;padding:4px 6px;cursor:pointer;border-radius:5px;
+  font-size:12.5px;color:var(--fg-dim);user-select:none}
+.tree-file>.hd:hover{background:var(--bg3);color:var(--fg)}
+.tree-file>.hd .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-file>.hd .dirty{color:var(--accent);font-weight:700}
+.tree-entry{display:flex;align-items:center;gap:6px;margin-left:22px;padding:4px 8px;border-radius:5px;cursor:pointer;
+  font-size:13px;color:var(--fg);overflow:hidden}
+.tree-entry:hover{background:var(--bg3)}
+.tree-entry.active{background:var(--accent-dim);color:#fff}
+.tree-entry .k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tree-entry .sub{font-size:11px;color:var(--fg-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw{transition:.12s;display:inline-block;width:12px;font-size:10px}
+.collapsed>.hd .tw{transform:rotate(-90deg)}
+.collapsed>.body{display:none}
+.tree-empty{padding:20px 12px;color:var(--fg-faint);font-size:12.5px;text-align:center;line-height:1.8}
+
+/* ===== 歡迎頁 ===== */
+#welcome{flex:1;display:flex;align-items:center;justify-content:center;overflow-y:auto}
+#welcome .card{max-width:640px;padding:40px;line-height:1.9}
+#welcome h1{color:var(--accent);font-size:26px;margin-bottom:4px}
+#welcome h1 small{color:var(--fg-dim);font-size:14px;font-weight:400;margin-left:10px}
+#welcome p{color:var(--fg-dim);margin:10px 0}
+#welcome .steps{margin:18px 0;padding:16px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+#welcome .steps li{margin:6px 0 6px 20px;color:var(--fg)}
+#welcome .warn{font-size:12.5px;color:var(--fg-faint);margin-top:14px}
+#welcome kbd{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:12px}
+
+/* ===== 編輯器 ===== */
+#editor{flex:1;display:none;flex-direction:column;min-height:0}
+#editor-head{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+#editor-head .crumb{color:var(--fg-faint);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#entry-key{font-size:16px;font-weight:700;color:var(--accent2);background:transparent;border:1px solid transparent;
+  padding:3px 8px;min-width:120px;max-width:320px;border-radius:6px}
+#entry-key:hover{border-color:var(--border)}
+#entry-key:focus{border-color:var(--accent);background:var(--bg)}
+#view-tabs{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:3px}
+#view-tabs button{padding:5px 14px;border-radius:6px;font-size:12.5px;color:var(--fg-dim)}
+#view-tabs button.active{background:var(--bg4);color:var(--fg);font-weight:600}
+#editor-body{flex:1;min-height:0;overflow-y:auto;padding:18px 22px 80px}
+#editor-body.yaml-mode{padding:0;display:flex;flex-direction:column}
+#yaml-edit{flex:1;border:none;border-radius:0;background:var(--bg);padding:16px 20px;font-size:13px}
+#yaml-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;background:var(--bg2);border-top:1px solid var(--border)}
+#yaml-bar .msg{font-size:12.5px;color:var(--fg-dim);flex:1}
+#yaml-bar .msg.err{color:var(--red)}
+
+/* ===== 表單元件 ===== */
+.sec{margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.sec>.sec-hd{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none}
+.sec>.sec-hd:hover{background:var(--bg3)}
+.sec>.sec-hd .t{font-weight:600;font-size:13.5px}
+.sec>.sec-hd .t .en{color:var(--fg-faint);font-weight:400;font-size:12px;margin-left:7px;font-family:var(--mono)}
+.sec>.sec-hd .hint{flex:1;text-align:right;font-size:11.5px;color:var(--fg-faint);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sec>.sec-bd{padding:6px 14px 14px;border-top:1px solid var(--border)}
+.sec.collapsed>.sec-bd{display:none}
+.frow{display:flex;align-items:center;gap:10px;margin:9px 0;flex-wrap:wrap}
+.frow label{width:130px;color:var(--fg-dim);font-size:12.5px;flex-shrink:0}
+.frow label .en{display:block;font-size:10.5px;color:var(--fg-faint);font-family:var(--mono)}
+.frow input[type=text]{flex:1;min-width:150px}
+.frow .grow{flex:1;min-width:150px}
+.list-ed{display:flex;flex-direction:column;gap:6px}
+.list-row{display:flex;gap:6px;align-items:center}
+.list-row input.main{flex:1;font-family:var(--mono);font-size:12.5px}
+.list-row .ord{display:flex;flex-direction:column}
+.list-row .ord button{font-size:8px;line-height:1;padding:2px 4px;color:var(--fg-faint)}
+.list-row .ord button:hover{color:var(--fg)}
+.kv-row{display:flex;gap:6px;align-items:center}
+.kv-row input.k{width:210px;font-family:var(--mono);font-size:12.5px}
+.kv-row input.v,.kv-row select.v{flex:1;font-family:var(--mono);font-size:12.5px}
+.add-line{margin-top:8px}
+.desc-hint{font-size:11.5px;color:var(--fg-faint);margin:2px 0 0 0;line-height:1.5;font-style:normal}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;background:var(--bg4);color:var(--fg-dim);margin-left:6px}
+.inline-warn{margin:8px 0;padding:8px 12px;border-radius:8px;background:#2e2617;border:1px solid #5a4a20;
+  color:var(--accent2);font-size:12.5px;line-height:1.6}
+
+/* ===== 技能行 ===== */
+.skline-row{display:flex;gap:6px;align-items:center}
+.skline-row input{flex:1;font-family:var(--mono);font-size:12.5px;color:var(--cyan)}
+
+/* ===== 彈窗 ===== */
+#modal-root{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(5,7,12,.72);z-index:50;backdrop-filter:blur(2px)}
+#modal-root.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:min(860px,94vw);
+  max-height:88vh;display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.modal>.m-hd{display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal>.m-hd .t{font-weight:700;font-size:15px;flex:1}
+.modal>.m-bd{padding:16px 20px;overflow-y:auto;flex:1;min-height:0}
+.modal>.m-ft{display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
+.modal>.m-ft .preview{flex:1;font-family:var(--mono);font-size:12px;color:var(--cyan);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-grid{display:grid;grid-template-columns:230px 1fr;gap:14px;min-height:340px}
+.pick-list{border:1px solid var(--border);border-radius:8px;overflow-y:auto;max-height:420px;background:var(--bg)}
+.pick-list .pi{padding:7px 11px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bg3)}
+.pick-list .pi:hover{background:var(--bg3)}
+.pick-list .pi.sel{background:var(--accent-dim);color:#fff}
+.pick-list .pi .zh{display:block;font-size:11px;color:var(--fg-faint)}
+.pick-list .pi.sel .zh{color:#e8dcc8}
+.param-tbl{width:100%;border-collapse:collapse}
+.param-tbl td{padding:5px 6px;vertical-align:top}
+.param-tbl td.pk{font-family:var(--mono);font-size:12px;color:var(--purple);width:130px;padding-top:11px}
+.param-tbl td.ph{font-size:11.5px;color:var(--fg-faint);width:200px;padding-top:11px;line-height:1.5}
+.param-tbl input{width:100%;font-family:var(--mono);font-size:12.5px}
+.mech-desc{padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  font-size:12.5px;color:var(--fg-dim);line-height:1.7;margin-bottom:12px}
+.mech-desc b{color:var(--accent2)}
+
+/* ===== 提示訊息 ===== */
+#toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:99}
+.toast{padding:11px 18px;border-radius:9px;background:var(--bg3);border:1px solid var(--border2);
+  font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tin .18s ease-out;max-width:420px;line-height:1.5}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+.toast.info{border-color:var(--blue);color:var(--blue)}
+@keyframes tin{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+
+.pill{font-size:11px;padding:2px 9px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);color:var(--fg-dim)}
+.pill.ok{color:var(--green);border-color:#2c5b3e}
+#folder-name{font-size:12px;color:var(--fg-dim);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spacer{flex:1}
+.muted{color:var(--fg-faint)}
+code{font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="logo">⚒ MythicForge<small>神話工坊 · MythicMobs 5.x / MythicCrucible 編輯器</small></div>
+    <div class="spacer"></div>
+    <span id="folder-name"></span>
+    <span id="fs-pill" class="pill">未連接資料夾</span>
+    <button class="btn" id="btn-reload" style="display:none">↻ 重新載入</button>
+    <button class="btn primary" id="btn-open">📂 開啟 MythicMobs 資料夾</button>
+  </div>
+  <div id="main">
+    <div id="sidebar">
+      <div id="cat-tabs"></div>
+      <div id="sidebar-tools">
+        <input id="search" type="text" placeholder="搜尋條目名稱…">
+        <button class="btn small" id="btn-newfile" title="在此分類新增 YAML 檔案">＋檔案</button>
+      </div>
+      <div id="tree"></div>
+    </div>
+    <div id="content">
+      <div id="welcome">
+        <div class="card">
+          <h1>⚒ MythicForge<small>神話工坊</small></h1>
+          <p>視覺化編輯 <b>MythicMobs</b> 怪物、<b>MythicCrucible</b> 物品、技能與掉落表，直接讀寫伺服器設定檔。</p>
+          <div class="steps">
+            <ol>
+              <li>使用 <b>Chrome</b> 或 <b>Edge</b> 開啟本頁（檔案讀寫功能需要）</li>
+              <li>點右上角「📂 開啟 MythicMobs 資料夾」，選擇伺服器的 <code>plugins/MythicMobs</code></li>
+              <li>左側選擇分類與條目開始編輯，<kbd>Ctrl</kbd>+<kbd>S</kbd> 儲存目前檔案</li>
+              <li>存檔後到遊戲內或後台執行 <code>/mm reload</code> 讓變更生效</li>
+            </ol>
+          </div>
+          <p class="warn">⚠ 儲存時只會改寫你編輯過的條目區塊，檔案中其他條目與註解會原樣保留（但被編輯條目<b>內部</b>的註解會遺失）。建議重要修改前先備份。</p>
+        </div>
+      </div>
+      <div id="editor">
+        <div id="editor-head">
+          <div style="min-width:0">
+            <div class="crumb" id="crumb"></div>
+            <input id="entry-key" title="條目名稱（點擊可重新命名）">
+          </div>
+          <div class="spacer"></div>
+          <div id="view-tabs">
+            <button data-v="form" class="active">表單編輯</button>
+            <button data-v="yaml">YAML 原始碼</button>
+          </div>
+          <button class="btn danger small" id="btn-del-entry">🗑 刪除條目</button>
+          <button class="btn primary" id="btn-save">💾 儲存檔案</button>
+        </div>
+        <div id="editor-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toasts"></div>
+<script>
+/*! js-yaml 4.1.0 https://github.com/nodeca/js-yaml @license MIT */
+!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).jsyaml={})}(this,(function(e){"use strict";function t(e){return null==e}var n={isNothing:t,isObject:function(e){return"object"==typeof e&&null!==e},toArray:function(e){return Array.isArray(e)?e:t(e)?[]:[e]},repeat:function(e,t){var n,i="";for(n=0;n<t;n+=1)i+=e;return i},isNegativeZero:function(e){return 0===e&&Number.NEGATIVE_INFINITY===1/e},extend:function(e,t){var n,i,r,o;if(t)for(n=0,i=(o=Object.keys(t)).length;n<i;n+=1)e[r=o[n]]=t[r];return e}};function i(e,t){var n="",i=e.reason||"(unknown reason)";return e.mark?(e.mark.name&&(n+='in "'+e.mark.name+'" '),n+="("+(e.mark.line+1)+":"+(e.mark.column+1)+")",!t&&e.mark.snippet&&(n+="\n\n"+e.mark.snippet),i+" "+n):i}function r(e,t){Error.call(this),this.name="YAMLException",this.reason=e,this.mark=t,this.message=i(this,!1),Error.captureStackTrace?Error.captureStackTrace(this,this.constructor):this.stack=(new Error).stack||""}r.prototype=Object.create(Error.prototype),r.prototype.constructor=r,r.prototype.toString=function(e){return this.name+": "+i(this,e)};var o=r;function a(e,t,n,i,r){var o="",a="",l=Math.floor(r/2)-1;return i-t>l&&(t=i-l+(o=" ... ").length),n-i>l&&(n=i+l-(a=" ...").length),{str:o+e.slice(t,n).replace(/\t/g,"→")+a,pos:i-t+o.length}}function l(e,t){return n.repeat(" ",t-e.length)+e}var c=function(e,t){if(t=Object.create(t||null),!e.buffer)return null;t.maxLength||(t.maxLength=79),"number"!=typeof t.indent&&(t.indent=1),"number"!=typeof t.linesBefore&&(t.linesBefore=3),"number"!=typeof t.linesAfter&&(t.linesAfter=2);for(var i,r=/\r?\n|\r|\0/g,o=[0],c=[],s=-1;i=r.exec(e.buffer);)c.push(i.index),o.push(i.index+i[0].length),e.position<=i.index&&s<0&&(s=o.length-2);s<0&&(s=o.length-1);var u,p,f="",d=Math.min(e.line+t.linesAfter,c.length).toString().length,h=t.maxLength-(t.indent+d+3);for(u=1;u<=t.linesBefore&&!(s-u<0);u++)p=a(e.buffer,o[s-u],c[s-u],e.position-(o[s]-o[s-u]),h),f=n.repeat(" ",t.indent)+l((e.line-u+1).toString(),d)+" | "+p.str+"\n"+f;for(p=a(e.buffer,o[s],c[s],e.position,h),f+=n.repeat(" ",t.indent)+l((e.line+1).toString(),d)+" | "+p.str+"\n",f+=n.repeat("-",t.indent+d+3+p.pos)+"^\n",u=1;u<=t.linesAfter&&!(s+u>=c.length);u++)p=a(e.buffer,o[s+u],c[s+u],e.position-(o[s]-o[s+u]),h),f+=n.repeat(" ",t.indent)+l((e.line+u+1).toString(),d)+" | "+p.str+"\n";return f.replace(/\n$/,"")},s=["kind","multi","resolve","construct","instanceOf","predicate","represent","representName","defaultStyle","styleAliases"],u=["scalar","sequence","mapping"];var p=function(e,t){if(t=t||{},Object.keys(t).forEach((function(t){if(-1===s.indexOf(t))throw new o('Unknown option "'+t+'" is met in definition of "'+e+'" YAML type.')})),this.options=t,this.tag=e,this.kind=t.kind||null,this.resolve=t.resolve||function(){return!0},this.construct=t.construct||function(e){return e},this.instanceOf=t.instanceOf||null,this.predicate=t.predicate||null,this.represent=t.represent||null,this.representName=t.representName||null,this.defaultStyle=t.defaultStyle||null,this.multi=t.multi||!1,this.styleAliases=function(e){var t={};return null!==e&&Object.keys(e).forEach((function(n){e[n].forEach((function(e){t[String(e)]=n}))})),t}(t.styleAliases||null),-1===u.indexOf(this.kind))throw new o('Unknown kind "'+this.kind+'" is specified for "'+e+'" YAML type.')};function f(e,t){var n=[];return e[t].forEach((function(e){var t=n.length;n.forEach((function(n,i){n.tag===e.tag&&n.kind===e.kind&&n.multi===e.multi&&(t=i)})),n[t]=e})),n}function d(e){return this.extend(e)}d.prototype.extend=function(e){var t=[],n=[];if(e instanceof p)n.push(e);else if(Array.isArray(e))n=n.concat(e);else{if(!e||!Array.isArray(e.implicit)&&!Array.isArray(e.explicit))throw new o("Schema.extend argument should be a Type, [ Type ], or a schema definition ({ implicit: [...], explicit: [...] })");e.implicit&&(t=t.concat(e.implicit)),e.explicit&&(n=n.concat(e.explicit))}t.forEach((function(e){if(!(e instanceof p))throw new o("Specified list of YAML types (or a single Type object) contains a non-Type object.");if(e.loadKind&&"scalar"!==e.loadKind)throw new o("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");if(e.multi)throw new o("There is a multi type in the implicit list of a schema. Multi tags can only be listed as explicit.")})),n.forEach((function(e){if(!(e instanceof p))throw new o("Specified list of YAML types (or a single Type object) contains a non-Type object.")}));var i=Object.create(d.prototype);return i.implicit=(this.implicit||[]).concat(t),i.explicit=(this.explicit||[]).concat(n),i.compiledImplicit=f(i,"implicit"),i.compiledExplicit=f(i,"explicit"),i.compiledTypeMap=function(){var e,t,n={scalar:{},sequence:{},mapping:{},fallback:{},multi:{scalar:[],sequence:[],mapping:[],fallback:[]}};function i(e){e.multi?(n.multi[e.kind].push(e),n.multi.fallback.push(e)):n[e.kind][e.tag]=n.fallback[e.tag]=e}for(e=0,t=arguments.length;e<t;e+=1)arguments[e].forEach(i);return n}(i.compiledImplicit,i.compiledExplicit),i};var h=d,g=new p("tag:yaml.org,2002:str",{kind:"scalar",construct:function(e){return null!==e?e:""}}),m=new p("tag:yaml.org,2002:seq",{kind:"sequence",construct:function(e){return null!==e?e:[]}}),y=new p("tag:yaml.org,2002:map",{kind:"mapping",construct:function(e){return null!==e?e:{}}}),b=new h({explicit:[g,m,y]});var A=new p("tag:yaml.org,2002:null",{kind:"scalar",resolve:function(e){if(null===e)return!0;var t=e.length;return 1===t&&"~"===e||4===t&&("null"===e||"Null"===e||"NULL"===e)},construct:function(){return null},predicate:function(e){return null===e},represent:{canonical:function(){return"~"},lowercase:function(){return"null"},uppercase:function(){return"NULL"},camelcase:function(){return"Null"},empty:function(){return""}},defaultStyle:"lowercase"});var v=new p("tag:yaml.org,2002:bool",{kind:"scalar",resolve:function(e){if(null===e)return!1;var t=e.length;return 4===t&&("true"===e||"True"===e||"TRUE"===e)||5===t&&("false"===e||"False"===e||"FALSE"===e)},construct:function(e){return"true"===e||"True"===e||"TRUE"===e},predicate:function(e){return"[object Boolean]"===Object.prototype.toString.call(e)},represent:{lowercase:function(e){return e?"true":"false"},uppercase:function(e){return e?"TRUE":"FALSE"},camelcase:function(e){return e?"True":"False"}},defaultStyle:"lowercase"});function w(e){return 48<=e&&e<=55}function k(e){return 48<=e&&e<=57}var C=new p("tag:yaml.org,2002:int",{kind:"scalar",resolve:function(e){if(null===e)return!1;var t,n,i=e.length,r=0,o=!1;if(!i)return!1;if("-"!==(t=e[r])&&"+"!==t||(t=e[++r]),"0"===t){if(r+1===i)return!0;if("b"===(t=e[++r])){for(r++;r<i;r++)if("_"!==(t=e[r])){if("0"!==t&&"1"!==t)return!1;o=!0}return o&&"_"!==t}if("x"===t){for(r++;r<i;r++)if("_"!==(t=e[r])){if(!(48<=(n=e.charCodeAt(r))&&n<=57||65<=n&&n<=70||97<=n&&n<=102))return!1;o=!0}return o&&"_"!==t}if("o"===t){for(r++;r<i;r++)if("_"!==(t=e[r])){if(!w(e.charCodeAt(r)))return!1;o=!0}return o&&"_"!==t}}if("_"===t)return!1;for(;r<i;r++)if("_"!==(t=e[r])){if(!k(e.charCodeAt(r)))return!1;o=!0}return!(!o||"_"===t)},construct:function(e){var t,n=e,i=1;if(-1!==n.indexOf("_")&&(n=n.replace(/_/g,"")),"-"!==(t=n[0])&&"+"!==t||("-"===t&&(i=-1),t=(n=n.slice(1))[0]),"0"===n)return 0;if("0"===t){if("b"===n[1])return i*parseInt(n.slice(2),2);if("x"===n[1])return i*parseInt(n.slice(2),16);if("o"===n[1])return i*parseInt(n.slice(2),8)}return i*parseInt(n,10)},predicate:function(e){return"[object Number]"===Object.prototype.toString.call(e)&&e%1==0&&!n.isNegativeZero(e)},represent:{binary:function(e){return e>=0?"0b"+e.toString(2):"-0b"+e.toString(2).slice(1)},octal:function(e){return e>=0?"0o"+e.toString(8):"-0o"+e.toString(8).slice(1)},decimal:function(e){return e.toString(10)},hexadecimal:function(e){return e>=0?"0x"+e.toString(16).toUpperCase():"-0x"+e.toString(16).toUpperCase().slice(1)}},defaultStyle:"decimal",styleAliases:{binary:[2,"bin"],octal:[8,"oct"],decimal:[10,"dec"],hexadecimal:[16,"hex"]}}),x=new RegExp("^(?:[-+]?(?:[0-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");var I=/^[-+]?[0-9]+e/;var S=new p("tag:yaml.org,2002:float",{kind:"scalar",resolve:function(e){return null!==e&&!(!x.test(e)||"_"===e[e.length-1])},construct:function(e){var t,n;return n="-"===(t=e.replace(/_/g,"").toLowerCase())[0]?-1:1,"+-".indexOf(t[0])>=0&&(t=t.slice(1)),".inf"===t?1===n?Number.POSITIVE_INFINITY:Number.NEGATIVE_INFINITY:".nan"===t?NaN:n*parseFloat(t,10)},predicate:function(e){return"[object Number]"===Object.prototype.toString.call(e)&&(e%1!=0||n.isNegativeZero(e))},represent:function(e,t){var i;if(isNaN(e))switch(t){case"lowercase":return".nan";case"uppercase":return".NAN";case"camelcase":return".NaN"}else if(Number.POSITIVE_INFINITY===e)switch(t){case"lowercase":return".inf";case"uppercase":return".INF";case"camelcase":return".Inf"}else if(Number.NEGATIVE_INFINITY===e)switch(t){case"lowercase":return"-.inf";case"uppercase":return"-.INF";case"camelcase":return"-.Inf"}else if(n.isNegativeZero(e))return"-0.0";return i=e.toString(10),I.test(i)?i.replace("e",".e"):i},defaultStyle:"lowercase"}),O=b.extend({implicit:[A,v,C,S]}),j=O,T=new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])$"),N=new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$");var F=new p("tag:yaml.org,2002:timestamp",{kind:"scalar",resolve:function(e){return null!==e&&(null!==T.exec(e)||null!==N.exec(e))},construct:function(e){var t,n,i,r,o,a,l,c,s=0,u=null;if(null===(t=T.exec(e))&&(t=N.exec(e)),null===t)throw new Error("Date resolve error");if(n=+t[1],i=+t[2]-1,r=+t[3],!t[4])return new Date(Date.UTC(n,i,r));if(o=+t[4],a=+t[5],l=+t[6],t[7]){for(s=t[7].slice(0,3);s.length<3;)s+="0";s=+s}return t[9]&&(u=6e4*(60*+t[10]+ +(t[11]||0)),"-"===t[9]&&(u=-u)),c=new Date(Date.UTC(n,i,r,o,a,l,s)),u&&c.setTime(c.getTime()-u),c},instanceOf:Date,represent:function(e){return e.toISOString()}});var E=new p("tag:yaml.org,2002:merge",{kind:"scalar",resolve:function(e){return"<<"===e||null===e}}),M="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r";var L=new p("tag:yaml.org,2002:binary",{kind:"scalar",resolve:function(e){if(null===e)return!1;var t,n,i=0,r=e.length,o=M;for(n=0;n<r;n++)if(!((t=o.indexOf(e.charAt(n)))>64)){if(t<0)return!1;i+=6}return i%8==0},construct:function(e){var t,n,i=e.replace(/[\r\n=]/g,""),r=i.length,o=M,a=0,l=[];for(t=0;t<r;t++)t%4==0&&t&&(l.push(a>>16&255),l.push(a>>8&255),l.push(255&a)),a=a<<6|o.indexOf(i.charAt(t));return 0===(n=r%4*6)?(l.push(a>>16&255),l.push(a>>8&255),l.push(255&a)):18===n?(l.push(a>>10&255),l.push(a>>2&255)):12===n&&l.push(a>>4&255),new Uint8Array(l)},predicate:function(e){return"[object Uint8Array]"===Object.prototype.toString.call(e)},represent:function(e){var t,n,i="",r=0,o=e.length,a=M;for(t=0;t<o;t++)t%3==0&&t&&(i+=a[r>>18&63],i+=a[r>>12&63],i+=a[r>>6&63],i+=a[63&r]),r=(r<<8)+e[t];return 0===(n=o%3)?(i+=a[r>>18&63],i+=a[r>>12&63],i+=a[r>>6&63],i+=a[63&r]):2===n?(i+=a[r>>10&63],i+=a[r>>4&63],i+=a[r<<2&63],i+=a[64]):1===n&&(i+=a[r>>2&63],i+=a[r<<4&63],i+=a[64],i+=a[64]),i}}),_=Object.prototype.hasOwnProperty,D=Object.prototype.toString;var U=new p("tag:yaml.org,2002:omap",{kind:"sequence",resolve:function(e){if(null===e)return!0;var t,n,i,r,o,a=[],l=e;for(t=0,n=l.length;t<n;t+=1){if(i=l[t],o=!1,"[object Object]"!==D.call(i))return!1;for(r in i)if(_.call(i,r)){if(o)return!1;o=!0}if(!o)return!1;if(-1!==a.indexOf(r))return!1;a.push(r)}return!0},construct:function(e){return null!==e?e:[]}}),q=Object.prototype.toString;var Y=new p("tag:yaml.org,2002:pairs",{kind:"sequence",resolve:function(e){if(null===e)return!0;var t,n,i,r,o,a=e;for(o=new Array(a.length),t=0,n=a.length;t<n;t+=1){if(i=a[t],"[object Object]"!==q.call(i))return!1;if(1!==(r=Object.keys(i)).length)return!1;o[t]=[r[0],i[r[0]]]}return!0},construct:function(e){if(null===e)return[];var t,n,i,r,o,a=e;for(o=new Array(a.length),t=0,n=a.length;t<n;t+=1)i=a[t],r=Object.keys(i),o[t]=[r[0],i[r[0]]];return o}}),R=Object.prototype.hasOwnProperty;var B=new p("tag:yaml.org,2002:set",{kind:"mapping",resolve:function(e){if(null===e)return!0;var t,n=e;for(t in n)if(R.call(n,t)&&null!==n[t])return!1;return!0},construct:function(e){return null!==e?e:{}}}),K=j.extend({implicit:[F,E],explicit:[L,U,Y,B]}),P=Object.prototype.hasOwnProperty,W=/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/,H=/[\x85\u2028\u2029]/,$=/[,\[\]\{\}]/,G=/^(?:!|!!|![a-z\-]+!)$/i,V=/^(?:!|[^,\[\]\{\}])(?:%[0-9a-f]{2}|[0-9a-z\-#;\/\?:@&=\+\$,_\.!~\*'\(\)\[\]])*$/i;function Z(e){return Object.prototype.toString.call(e)}function J(e){return 10===e||13===e}function Q(e){return 9===e||32===e}function z(e){return 9===e||32===e||10===e||13===e}function X(e){return 44===e||91===e||93===e||123===e||125===e}function ee(e){var t;return 48<=e&&e<=57?e-48:97<=(t=32|e)&&t<=102?t-97+10:-1}function te(e){return 48===e?"\0":97===e?"":98===e?"\b":116===e||9===e?"\t":110===e?"\n":118===e?"\v":102===e?"\f":114===e?"\r":101===e?"":32===e?" ":34===e?'"':47===e?"/":92===e?"\\":78===e?"":95===e?" ":76===e?"\u2028":80===e?"\u2029":""}function ne(e){return e<=65535?String.fromCharCode(e):String.fromCharCode(55296+(e-65536>>10),56320+(e-65536&1023))}for(var ie=new Array(256),re=new Array(256),oe=0;oe<256;oe++)ie[oe]=te(oe)?1:0,re[oe]=te(oe);function ae(e,t){this.input=e,this.filename=t.filename||null,this.schema=t.schema||K,this.onWarning=t.onWarning||null,this.legacy=t.legacy||!1,this.json=t.json||!1,this.listener=t.listener||null,this.implicitTypes=this.schema.compiledImplicit,this.typeMap=this.schema.compiledTypeMap,this.length=e.length,this.position=0,this.line=0,this.lineStart=0,this.lineIndent=0,this.firstTabInLine=-1,this.documents=[]}function le(e,t){var n={name:e.filename,buffer:e.input.slice(0,-1),position:e.position,line:e.line,column:e.position-e.lineStart};return n.snippet=c(n),new o(t,n)}function ce(e,t){throw le(e,t)}function se(e,t){e.onWarning&&e.onWarning.call(null,le(e,t))}var ue={YAML:function(e,t,n){var i,r,o;null!==e.version&&ce(e,"duplication of %YAML directive"),1!==n.length&&ce(e,"YAML directive accepts exactly one argument"),null===(i=/^([0-9]+)\.([0-9]+)$/.exec(n[0]))&&ce(e,"ill-formed argument of the YAML directive"),r=parseInt(i[1],10),o=parseInt(i[2],10),1!==r&&ce(e,"unacceptable YAML version of the document"),e.version=n[0],e.checkLineBreaks=o<2,1!==o&&2!==o&&se(e,"unsupported YAML version of the document")},TAG:function(e,t,n){var i,r;2!==n.length&&ce(e,"TAG directive accepts exactly two arguments"),i=n[0],r=n[1],G.test(i)||ce(e,"ill-formed tag handle (first argument) of the TAG directive"),P.call(e.tagMap,i)&&ce(e,'there is a previously declared suffix for "'+i+'" tag handle'),V.test(r)||ce(e,"ill-formed tag prefix (second argument) of the TAG directive");try{r=decodeURIComponent(r)}catch(t){ce(e,"tag prefix is malformed: "+r)}e.tagMap[i]=r}};function pe(e,t,n,i){var r,o,a,l;if(t<n){if(l=e.input.slice(t,n),i)for(r=0,o=l.length;r<o;r+=1)9===(a=l.charCodeAt(r))||32<=a&&a<=1114111||ce(e,"expected valid JSON character");else W.test(l)&&ce(e,"the stream contains non-printable characters");e.result+=l}}function fe(e,t,i,r){var o,a,l,c;for(n.isObject(i)||ce(e,"cannot merge mappings; the provided source object is unacceptable"),l=0,c=(o=Object.keys(i)).length;l<c;l+=1)a=o[l],P.call(t,a)||(t[a]=i[a],r[a]=!0)}function de(e,t,n,i,r,o,a,l,c){var s,u;if(Array.isArray(r))for(s=0,u=(r=Array.prototype.slice.call(r)).length;s<u;s+=1)Array.isArray(r[s])&&ce(e,"nested arrays are not supported inside keys"),"object"==typeof r&&"[object Object]"===Z(r[s])&&(r[s]="[object Object]");if("object"==typeof r&&"[object Object]"===Z(r)&&(r="[object Object]"),r=String(r),null===t&&(t={}),"tag:yaml.org,2002:merge"===i)if(Array.isArray(o))for(s=0,u=o.length;s<u;s+=1)fe(e,t,o[s],n);else fe(e,t,o,n);else e.json||P.call(n,r)||!P.call(t,r)||(e.line=a||e.line,e.lineStart=l||e.lineStart,e.position=c||e.position,ce(e,"duplicated mapping key")),"__proto__"===r?Object.defineProperty(t,r,{configurable:!0,enumerable:!0,writable:!0,value:o}):t[r]=o,delete n[r];return t}function he(e){var t;10===(t=e.input.charCodeAt(e.position))?e.position++:13===t?(e.position++,10===e.input.charCodeAt(e.position)&&e.position++):ce(e,"a line break is expected"),e.line+=1,e.lineStart=e.position,e.firstTabInLine=-1}function ge(e,t,n){for(var i=0,r=e.input.charCodeAt(e.position);0!==r;){for(;Q(r);)9===r&&-1===e.firstTabInLine&&(e.firstTabInLine=e.position),r=e.input.charCodeAt(++e.position);if(t&&35===r)do{r=e.input.charCodeAt(++e.position)}while(10!==r&&13!==r&&0!==r);if(!J(r))break;for(he(e),r=e.input.charCodeAt(e.position),i++,e.lineIndent=0;32===r;)e.lineIndent++,r=e.input.charCodeAt(++e.position)}return-1!==n&&0!==i&&e.lineIndent<n&&se(e,"deficient indentation"),i}function me(e){var t,n=e.position;return!(45!==(t=e.input.charCodeAt(n))&&46!==t||t!==e.input.charCodeAt(n+1)||t!==e.input.charCodeAt(n+2)||(n+=3,0!==(t=e.input.charCodeAt(n))&&!z(t)))}function ye(e,t){1===t?e.result+=" ":t>1&&(e.result+=n.repeat("\n",t-1))}function be(e,t){var n,i,r=e.tag,o=e.anchor,a=[],l=!1;if(-1!==e.firstTabInLine)return!1;for(null!==e.anchor&&(e.anchorMap[e.anchor]=a),i=e.input.charCodeAt(e.position);0!==i&&(-1!==e.firstTabInLine&&(e.position=e.firstTabInLine,ce(e,"tab characters must not be used in indentation")),45===i)&&z(e.input.charCodeAt(e.position+1));)if(l=!0,e.position++,ge(e,!0,-1)&&e.lineIndent<=t)a.push(null),i=e.input.charCodeAt(e.position);else if(n=e.line,we(e,t,3,!1,!0),a.push(e.result),ge(e,!0,-1),i=e.input.charCodeAt(e.position),(e.line===n||e.lineIndent>t)&&0!==i)ce(e,"bad indentation of a sequence entry");else if(e.lineIndent<t)break;return!!l&&(e.tag=r,e.anchor=o,e.kind="sequence",e.result=a,!0)}function Ae(e){var t,n,i,r,o=!1,a=!1;if(33!==(r=e.input.charCodeAt(e.position)))return!1;if(null!==e.tag&&ce(e,"duplication of a tag property"),60===(r=e.input.charCodeAt(++e.position))?(o=!0,r=e.input.charCodeAt(++e.position)):33===r?(a=!0,n="!!",r=e.input.charCodeAt(++e.position)):n="!",t=e.position,o){do{r=e.input.charCodeAt(++e.position)}while(0!==r&&62!==r);e.position<e.length?(i=e.input.slice(t,e.position),r=e.input.charCodeAt(++e.position)):ce(e,"unexpected end of the stream within a verbatim tag")}else{for(;0!==r&&!z(r);)33===r&&(a?ce(e,"tag suffix cannot contain exclamation marks"):(n=e.input.slice(t-1,e.position+1),G.test(n)||ce(e,"named tag handle cannot contain such characters"),a=!0,t=e.position+1)),r=e.input.charCodeAt(++e.position);i=e.input.slice(t,e.position),$.test(i)&&ce(e,"tag suffix cannot contain flow indicator characters")}i&&!V.test(i)&&ce(e,"tag name cannot contain such characters: "+i);try{i=decodeURIComponent(i)}catch(t){ce(e,"tag name is malformed: "+i)}return o?e.tag=i:P.call(e.tagMap,n)?e.tag=e.tagMap[n]+i:"!"===n?e.tag="!"+i:"!!"===n?e.tag="tag:yaml.org,2002:"+i:ce(e,'undeclared tag handle "'+n+'"'),!0}function ve(e){var t,n;if(38!==(n=e.input.charCodeAt(e.position)))return!1;for(null!==e.anchor&&ce(e,"duplication of an anchor property"),n=e.input.charCodeAt(++e.position),t=e.position;0!==n&&!z(n)&&!X(n);)n=e.input.charCodeAt(++e.position);return e.position===t&&ce(e,"name of an anchor node must contain at least one character"),e.anchor=e.input.slice(t,e.position),!0}function we(e,t,i,r,o){var a,l,c,s,u,p,f,d,h,g=1,m=!1,y=!1;if(null!==e.listener&&e.listener("open",e),e.tag=null,e.anchor=null,e.kind=null,e.result=null,a=l=c=4===i||3===i,r&&ge(e,!0,-1)&&(m=!0,e.lineIndent>t?g=1:e.lineIndent===t?g=0:e.lineIndent<t&&(g=-1)),1===g)for(;Ae(e)||ve(e);)ge(e,!0,-1)?(m=!0,c=a,e.lineIndent>t?g=1:e.lineIndent===t?g=0:e.lineIndent<t&&(g=-1)):c=!1;if(c&&(c=m||o),1!==g&&4!==i||(d=1===i||2===i?t:t+1,h=e.position-e.lineStart,1===g?c&&(be(e,h)||function(e,t,n){var i,r,o,a,l,c,s,u=e.tag,p=e.anchor,f={},d=Object.create(null),h=null,g=null,m=null,y=!1,b=!1;if(-1!==e.firstTabInLine)return!1;for(null!==e.anchor&&(e.anchorMap[e.anchor]=f),s=e.input.charCodeAt(e.position);0!==s;){if(y||-1===e.firstTabInLine||(e.position=e.firstTabInLine,ce(e,"tab characters must not be used in indentation")),i=e.input.charCodeAt(e.position+1),o=e.line,63!==s&&58!==s||!z(i)){if(a=e.line,l=e.lineStart,c=e.position,!we(e,n,2,!1,!0))break;if(e.line===o){for(s=e.input.charCodeAt(e.position);Q(s);)s=e.input.charCodeAt(++e.position);if(58===s)z(s=e.input.charCodeAt(++e.position))||ce(e,"a whitespace character is expected after the key-value separator within a block mapping"),y&&(de(e,f,d,h,g,null,a,l,c),h=g=m=null),b=!0,y=!1,r=!1,h=e.tag,g=e.result;else{if(!b)return e.tag=u,e.anchor=p,!0;ce(e,"can not read an implicit mapping pair; a colon is missed")}}else{if(!b)return e.tag=u,e.anchor=p,!0;ce(e,"can not read a block mapping entry; a multiline key may not be an implicit key")}}else 63===s?(y&&(de(e,f,d,h,g,null,a,l,c),h=g=m=null),b=!0,y=!0,r=!0):y?(y=!1,r=!0):ce(e,"incomplete explicit mapping pair; a key node is missed; or followed by a non-tabulated empty line"),e.position+=1,s=i;if((e.line===o||e.lineIndent>t)&&(y&&(a=e.line,l=e.lineStart,c=e.position),we(e,t,4,!0,r)&&(y?g=e.result:m=e.result),y||(de(e,f,d,h,g,m,a,l,c),h=g=m=null),ge(e,!0,-1),s=e.input.charCodeAt(e.position)),(e.line===o||e.lineIndent>t)&&0!==s)ce(e,"bad indentation of a mapping entry");else if(e.lineIndent<t)break}return y&&de(e,f,d,h,g,null,a,l,c),b&&(e.tag=u,e.anchor=p,e.kind="mapping",e.result=f),b}(e,h,d))||function(e,t){var n,i,r,o,a,l,c,s,u,p,f,d,h=!0,g=e.tag,m=e.anchor,y=Object.create(null);if(91===(d=e.input.charCodeAt(e.position)))a=93,s=!1,o=[];else{if(123!==d)return!1;a=125,s=!0,o={}}for(null!==e.anchor&&(e.anchorMap[e.anchor]=o),d=e.input.charCodeAt(++e.position);0!==d;){if(ge(e,!0,t),(d=e.input.charCodeAt(e.position))===a)return e.position++,e.tag=g,e.anchor=m,e.kind=s?"mapping":"sequence",e.result=o,!0;h?44===d&&ce(e,"expected the node content, but found ','"):ce(e,"missed comma between flow collection entries"),f=null,l=c=!1,63===d&&z(e.input.charCodeAt(e.position+1))&&(l=c=!0,e.position++,ge(e,!0,t)),n=e.line,i=e.lineStart,r=e.position,we(e,t,1,!1,!0),p=e.tag,u=e.result,ge(e,!0,t),d=e.input.charCodeAt(e.position),!c&&e.line!==n||58!==d||(l=!0,d=e.input.charCodeAt(++e.position),ge(e,!0,t),we(e,t,1,!1,!0),f=e.result),s?de(e,o,y,p,u,f,n,i,r):l?o.push(de(e,null,y,p,u,f,n,i,r)):o.push(u),ge(e,!0,t),44===(d=e.input.charCodeAt(e.position))?(h=!0,d=e.input.charCodeAt(++e.position)):h=!1}ce(e,"unexpected end of the stream within a flow collection")}(e,d)?y=!0:(l&&function(e,t){var i,r,o,a,l,c=1,s=!1,u=!1,p=t,f=0,d=!1;if(124===(a=e.input.charCodeAt(e.position)))r=!1;else{if(62!==a)return!1;r=!0}for(e.kind="scalar",e.result="";0!==a;)if(43===(a=e.input.charCodeAt(++e.position))||45===a)1===c?c=43===a?3:2:ce(e,"repeat of a chomping mode identifier");else{if(!((o=48<=(l=a)&&l<=57?l-48:-1)>=0))break;0===o?ce(e,"bad explicit indentation width of a block scalar; it cannot be less than one"):u?ce(e,"repeat of an indentation width identifier"):(p=t+o-1,u=!0)}if(Q(a)){do{a=e.input.charCodeAt(++e.position)}while(Q(a));if(35===a)do{a=e.input.charCodeAt(++e.position)}while(!J(a)&&0!==a)}for(;0!==a;){for(he(e),e.lineIndent=0,a=e.input.charCodeAt(e.position);(!u||e.lineIndent<p)&&32===a;)e.lineIndent++,a=e.input.charCodeAt(++e.position);if(!u&&e.lineIndent>p&&(p=e.lineIndent),J(a))f++;else{if(e.lineIndent<p){3===c?e.result+=n.repeat("\n",s?1+f:f):1===c&&s&&(e.result+="\n");break}for(r?Q(a)?(d=!0,e.result+=n.repeat("\n",s?1+f:f)):d?(d=!1,e.result+=n.repeat("\n",f+1)):0===f?s&&(e.result+=" "):e.result+=n.repeat("\n",f):e.result+=n.repeat("\n",s?1+f:f),s=!0,u=!0,f=0,i=e.position;!J(a)&&0!==a;)a=e.input.charCodeAt(++e.position);pe(e,i,e.position,!1)}}return!0}(e,d)||function(e,t){var n,i,r;if(39!==(n=e.input.charCodeAt(e.position)))return!1;for(e.kind="scalar",e.result="",e.position++,i=r=e.position;0!==(n=e.input.charCodeAt(e.position));)if(39===n){if(pe(e,i,e.position,!0),39!==(n=e.input.charCodeAt(++e.position)))return!0;i=e.position,e.position++,r=e.position}else J(n)?(pe(e,i,r,!0),ye(e,ge(e,!1,t)),i=r=e.position):e.position===e.lineStart&&me(e)?ce(e,"unexpected end of the document within a single quoted scalar"):(e.position++,r=e.position);ce(e,"unexpected end of the stream within a single quoted scalar")}(e,d)||function(e,t){var n,i,r,o,a,l,c;if(34!==(l=e.input.charCodeAt(e.position)))return!1;for(e.kind="scalar",e.result="",e.position++,n=i=e.position;0!==(l=e.input.charCodeAt(e.position));){if(34===l)return pe(e,n,e.position,!0),e.position++,!0;if(92===l){if(pe(e,n,e.position,!0),J(l=e.input.charCodeAt(++e.position)))ge(e,!1,t);else if(l<256&&ie[l])e.result+=re[l],e.position++;else if((a=120===(c=l)?2:117===c?4:85===c?8:0)>0){for(r=a,o=0;r>0;r--)(a=ee(l=e.input.charCodeAt(++e.position)))>=0?o=(o<<4)+a:ce(e,"expected hexadecimal character");e.result+=ne(o),e.position++}else ce(e,"unknown escape sequence");n=i=e.position}else J(l)?(pe(e,n,i,!0),ye(e,ge(e,!1,t)),n=i=e.position):e.position===e.lineStart&&me(e)?ce(e,"unexpected end of the document within a double quoted scalar"):(e.position++,i=e.position)}ce(e,"unexpected end of the stream within a double quoted scalar")}(e,d)?y=!0:!function(e){var t,n,i;if(42!==(i=e.input.charCodeAt(e.position)))return!1;for(i=e.input.charCodeAt(++e.position),t=e.position;0!==i&&!z(i)&&!X(i);)i=e.input.charCodeAt(++e.position);return e.position===t&&ce(e,"name of an alias node must contain at least one character"),n=e.input.slice(t,e.position),P.call(e.anchorMap,n)||ce(e,'unidentified alias "'+n+'"'),e.result=e.anchorMap[n],ge(e,!0,-1),!0}(e)?function(e,t,n){var i,r,o,a,l,c,s,u,p=e.kind,f=e.result;if(z(u=e.input.charCodeAt(e.position))||X(u)||35===u||38===u||42===u||33===u||124===u||62===u||39===u||34===u||37===u||64===u||96===u)return!1;if((63===u||45===u)&&(z(i=e.input.charCodeAt(e.position+1))||n&&X(i)))return!1;for(e.kind="scalar",e.result="",r=o=e.position,a=!1;0!==u;){if(58===u){if(z(i=e.input.charCodeAt(e.position+1))||n&&X(i))break}else if(35===u){if(z(e.input.charCodeAt(e.position-1)))break}else{if(e.position===e.lineStart&&me(e)||n&&X(u))break;if(J(u)){if(l=e.line,c=e.lineStart,s=e.lineIndent,ge(e,!1,-1),e.lineIndent>=t){a=!0,u=e.input.charCodeAt(e.position);continue}e.position=o,e.line=l,e.lineStart=c,e.lineIndent=s;break}}a&&(pe(e,r,o,!1),ye(e,e.line-l),r=o=e.position,a=!1),Q(u)||(o=e.position+1),u=e.input.charCodeAt(++e.position)}return pe(e,r,o,!1),!!e.result||(e.kind=p,e.result=f,!1)}(e,d,1===i)&&(y=!0,null===e.tag&&(e.tag="?")):(y=!0,null===e.tag&&null===e.anchor||ce(e,"alias node should not have any properties")),null!==e.anchor&&(e.anchorMap[e.anchor]=e.result)):0===g&&(y=c&&be(e,h))),null===e.tag)null!==e.anchor&&(e.anchorMap[e.anchor]=e.result);else if("?"===e.tag){for(null!==e.result&&"scalar"!==e.kind&&ce(e,'unacceptable node kind for !<?> tag; it should be "scalar", not "'+e.kind+'"'),s=0,u=e.implicitTypes.length;s<u;s+=1)if((f=e.implicitTypes[s]).resolve(e.result)){e.result=f.construct(e.result),e.tag=f.tag,null!==e.anchor&&(e.anchorMap[e.anchor]=e.result);break}}else if("!"!==e.tag){if(P.call(e.typeMap[e.kind||"fallback"],e.tag))f=e.typeMap[e.kind||"fallback"][e.tag];else for(f=null,s=0,u=(p=e.typeMap.multi[e.kind||"fallback"]).length;s<u;s+=1)if(e.tag.slice(0,p[s].tag.length)===p[s].tag){f=p[s];break}f||ce(e,"unknown tag !<"+e.tag+">"),null!==e.result&&f.kind!==e.kind&&ce(e,"unacceptable node kind for !<"+e.tag+'> tag; it should be "'+f.kind+'", not "'+e.kind+'"'),f.resolve(e.result,e.tag)?(e.result=f.construct(e.result,e.tag),null!==e.anchor&&(e.anchorMap[e.anchor]=e.result)):ce(e,"cannot resolve a node with !<"+e.tag+"> explicit tag")}return null!==e.listener&&e.listener("close",e),null!==e.tag||null!==e.anchor||y}function ke(e){var t,n,i,r,o=e.position,a=!1;for(e.version=null,e.checkLineBreaks=e.legacy,e.tagMap=Object.create(null),e.anchorMap=Object.create(null);0!==(r=e.input.charCodeAt(e.position))&&(ge(e,!0,-1),r=e.input.charCodeAt(e.position),!(e.lineIndent>0||37!==r));){for(a=!0,r=e.input.charCodeAt(++e.position),t=e.position;0!==r&&!z(r);)r=e.input.charCodeAt(++e.position);for(i=[],(n=e.input.slice(t,e.position)).length<1&&ce(e,"directive name must not be less than one character in length");0!==r;){for(;Q(r);)r=e.input.charCodeAt(++e.position);if(35===r){do{r=e.input.charCodeAt(++e.position)}while(0!==r&&!J(r));break}if(J(r))break;for(t=e.position;0!==r&&!z(r);)r=e.input.charCodeAt(++e.position);i.push(e.input.slice(t,e.position))}0!==r&&he(e),P.call(ue,n)?ue[n](e,n,i):se(e,'unknown document directive "'+n+'"')}ge(e,!0,-1),0===e.lineIndent&&45===e.input.charCodeAt(e.position)&&45===e.input.charCodeAt(e.position+1)&&45===e.input.charCodeAt(e.position+2)?(e.position+=3,ge(e,!0,-1)):a&&ce(e,"directives end mark is expected"),we(e,e.lineIndent-1,4,!1,!0),ge(e,!0,-1),e.checkLineBreaks&&H.test(e.input.slice(o,e.position))&&se(e,"non-ASCII line breaks are interpreted as content"),e.documents.push(e.result),e.position===e.lineStart&&me(e)?46===e.input.charCodeAt(e.position)&&(e.position+=3,ge(e,!0,-1)):e.position<e.length-1&&ce(e,"end of the stream or a document separator is expected")}function Ce(e,t){t=t||{},0!==(e=String(e)).length&&(10!==e.charCodeAt(e.length-1)&&13!==e.charCodeAt(e.length-1)&&(e+="\n"),65279===e.charCodeAt(0)&&(e=e.slice(1)));var n=new ae(e,t),i=e.indexOf("\0");for(-1!==i&&(n.position=i,ce(n,"null byte is not allowed in input")),n.input+="\0";32===n.input.charCodeAt(n.position);)n.lineIndent+=1,n.position+=1;for(;n.position<n.length-1;)ke(n);return n.documents}var xe={loadAll:function(e,t,n){null!==t&&"object"==typeof t&&void 0===n&&(n=t,t=null);var i=Ce(e,n);if("function"!=typeof t)return i;for(var r=0,o=i.length;r<o;r+=1)t(i[r])},load:function(e,t){var n=Ce(e,t);if(0!==n.length){if(1===n.length)return n[0];throw new o("expected a single document in the stream, but found more")}}},Ie=Object.prototype.toString,Se=Object.prototype.hasOwnProperty,Oe=65279,je={0:"\\0",7:"\\a",8:"\\b",9:"\\t",10:"\\n",11:"\\v",12:"\\f",13:"\\r",27:"\\e",34:'\\"',92:"\\\\",133:"\\N",160:"\\_",8232:"\\L",8233:"\\P"},Te=["y","Y","yes","Yes","YES","on","On","ON","n","N","no","No","NO","off","Off","OFF"],Ne=/^[-+]?[0-9_]+(?::[0-9_]+)+(?:\.[0-9_]*)?$/;function Fe(e){var t,i,r;if(t=e.toString(16).toUpperCase(),e<=255)i="x",r=2;else if(e<=65535)i="u",r=4;else{if(!(e<=4294967295))throw new o("code point within a string may not be greater than 0xFFFFFFFF");i="U",r=8}return"\\"+i+n.repeat("0",r-t.length)+t}function Ee(e){this.schema=e.schema||K,this.indent=Math.max(1,e.indent||2),this.noArrayIndent=e.noArrayIndent||!1,this.skipInvalid=e.skipInvalid||!1,this.flowLevel=n.isNothing(e.flowLevel)?-1:e.flowLevel,this.styleMap=function(e,t){var n,i,r,o,a,l,c;if(null===t)return{};for(n={},r=0,o=(i=Object.keys(t)).length;r<o;r+=1)a=i[r],l=String(t[a]),"!!"===a.slice(0,2)&&(a="tag:yaml.org,2002:"+a.slice(2)),(c=e.compiledTypeMap.fallback[a])&&Se.call(c.styleAliases,l)&&(l=c.styleAliases[l]),n[a]=l;return n}(this.schema,e.styles||null),this.sortKeys=e.sortKeys||!1,this.lineWidth=e.lineWidth||80,this.noRefs=e.noRefs||!1,this.noCompatMode=e.noCompatMode||!1,this.condenseFlow=e.condenseFlow||!1,this.quotingType='"'===e.quotingType?2:1,this.forceQuotes=e.forceQuotes||!1,this.replacer="function"==typeof e.replacer?e.replacer:null,this.implicitTypes=this.schema.compiledImplicit,this.explicitTypes=this.schema.compiledExplicit,this.tag=null,this.result="",this.duplicates=[],this.usedDuplicates=null}function Me(e,t){for(var i,r=n.repeat(" ",t),o=0,a=-1,l="",c=e.length;o<c;)-1===(a=e.indexOf("\n",o))?(i=e.slice(o),o=c):(i=e.slice(o,a+1),o=a+1),i.length&&"\n"!==i&&(l+=r),l+=i;return l}function Le(e,t){return"\n"+n.repeat(" ",e.indent*t)}function _e(e){return 32===e||9===e}function De(e){return 32<=e&&e<=126||161<=e&&e<=55295&&8232!==e&&8233!==e||57344<=e&&e<=65533&&e!==Oe||65536<=e&&e<=1114111}function Ue(e){return De(e)&&e!==Oe&&13!==e&&10!==e}function qe(e,t,n){var i=Ue(e),r=i&&!_e(e);return(n?i:i&&44!==e&&91!==e&&93!==e&&123!==e&&125!==e)&&35!==e&&!(58===t&&!r)||Ue(t)&&!_e(t)&&35===e||58===t&&r}function Ye(e,t){var n,i=e.charCodeAt(t);return i>=55296&&i<=56319&&t+1<e.length&&(n=e.charCodeAt(t+1))>=56320&&n<=57343?1024*(i-55296)+n-56320+65536:i}function Re(e){return/^\n* /.test(e)}function Be(e,t,n,i,r,o,a,l){var c,s,u=0,p=null,f=!1,d=!1,h=-1!==i,g=-1,m=De(s=Ye(e,0))&&s!==Oe&&!_e(s)&&45!==s&&63!==s&&58!==s&&44!==s&&91!==s&&93!==s&&123!==s&&125!==s&&35!==s&&38!==s&&42!==s&&33!==s&&124!==s&&61!==s&&62!==s&&39!==s&&34!==s&&37!==s&&64!==s&&96!==s&&function(e){return!_e(e)&&58!==e}(Ye(e,e.length-1));if(t||a)for(c=0;c<e.length;u>=65536?c+=2:c++){if(!De(u=Ye(e,c)))return 5;m=m&&qe(u,p,l),p=u}else{for(c=0;c<e.length;u>=65536?c+=2:c++){if(10===(u=Ye(e,c)))f=!0,h&&(d=d||c-g-1>i&&" "!==e[g+1],g=c);else if(!De(u))return 5;m=m&&qe(u,p,l),p=u}d=d||h&&c-g-1>i&&" "!==e[g+1]}return f||d?n>9&&Re(e)?5:a?2===o?5:2:d?4:3:!m||a||r(e)?2===o?5:2:1}function Ke(e,t,n,i,r){e.dump=function(){if(0===t.length)return 2===e.quotingType?'""':"''";if(!e.noCompatMode&&(-1!==Te.indexOf(t)||Ne.test(t)))return 2===e.quotingType?'"'+t+'"':"'"+t+"'";var a=e.indent*Math.max(1,n),l=-1===e.lineWidth?-1:Math.max(Math.min(e.lineWidth,40),e.lineWidth-a),c=i||e.flowLevel>-1&&n>=e.flowLevel;switch(Be(t,c,e.indent,l,(function(t){return function(e,t){var n,i;for(n=0,i=e.implicitTypes.length;n<i;n+=1)if(e.implicitTypes[n].resolve(t))return!0;return!1}(e,t)}),e.quotingType,e.forceQuotes&&!i,r)){case 1:return t;case 2:return"'"+t.replace(/'/g,"''")+"'";case 3:return"|"+Pe(t,e.indent)+We(Me(t,a));case 4:return">"+Pe(t,e.indent)+We(Me(function(e,t){var n,i,r=/(\n+)([^\n]*)/g,o=(l=e.indexOf("\n"),l=-1!==l?l:e.length,r.lastIndex=l,He(e.slice(0,l),t)),a="\n"===e[0]||" "===e[0];var l;for(;i=r.exec(e);){var c=i[1],s=i[2];n=" "===s[0],o+=c+(a||n||""===s?"":"\n")+He(s,t),a=n}return o}(t,l),a));case 5:return'"'+function(e){for(var t,n="",i=0,r=0;r<e.length;i>=65536?r+=2:r++)i=Ye(e,r),!(t=je[i])&&De(i)?(n+=e[r],i>=65536&&(n+=e[r+1])):n+=t||Fe(i);return n}(t)+'"';default:throw new o("impossible error: invalid scalar style")}}()}function Pe(e,t){var n=Re(e)?String(t):"",i="\n"===e[e.length-1];return n+(i&&("\n"===e[e.length-2]||"\n"===e)?"+":i?"":"-")+"\n"}function We(e){return"\n"===e[e.length-1]?e.slice(0,-1):e}function He(e,t){if(""===e||" "===e[0])return e;for(var n,i,r=/ [^ ]/g,o=0,a=0,l=0,c="";n=r.exec(e);)(l=n.index)-o>t&&(i=a>o?a:l,c+="\n"+e.slice(o,i),o=i+1),a=l;return c+="\n",e.length-o>t&&a>o?c+=e.slice(o,a)+"\n"+e.slice(a+1):c+=e.slice(o),c.slice(1)}function $e(e,t,n,i){var r,o,a,l="",c=e.tag;for(r=0,o=n.length;r<o;r+=1)a=n[r],e.replacer&&(a=e.replacer.call(n,String(r),a)),(Ve(e,t+1,a,!0,!0,!1,!0)||void 0===a&&Ve(e,t+1,null,!0,!0,!1,!0))&&(i&&""===l||(l+=Le(e,t)),e.dump&&10===e.dump.charCodeAt(0)?l+="-":l+="- ",l+=e.dump);e.tag=c,e.dump=l||"[]"}function Ge(e,t,n){var i,r,a,l,c,s;for(a=0,l=(r=n?e.explicitTypes:e.implicitTypes).length;a<l;a+=1)if(((c=r[a]).instanceOf||c.predicate)&&(!c.instanceOf||"object"==typeof t&&t instanceof c.instanceOf)&&(!c.predicate||c.predicate(t))){if(n?c.multi&&c.representName?e.tag=c.representName(t):e.tag=c.tag:e.tag="?",c.represent){if(s=e.styleMap[c.tag]||c.defaultStyle,"[object Function]"===Ie.call(c.represent))i=c.represent(t,s);else{if(!Se.call(c.represent,s))throw new o("!<"+c.tag+'> tag resolver accepts not "'+s+'" style');i=c.represent[s](t,s)}e.dump=i}return!0}return!1}function Ve(e,t,n,i,r,a,l){e.tag=null,e.dump=n,Ge(e,n,!1)||Ge(e,n,!0);var c,s=Ie.call(e.dump),u=i;i&&(i=e.flowLevel<0||e.flowLevel>t);var p,f,d="[object Object]"===s||"[object Array]"===s;if(d&&(f=-1!==(p=e.duplicates.indexOf(n))),(null!==e.tag&&"?"!==e.tag||f||2!==e.indent&&t>0)&&(r=!1),f&&e.usedDuplicates[p])e.dump="*ref_"+p;else{if(d&&f&&!e.usedDuplicates[p]&&(e.usedDuplicates[p]=!0),"[object Object]"===s)i&&0!==Object.keys(e.dump).length?(!function(e,t,n,i){var r,a,l,c,s,u,p="",f=e.tag,d=Object.keys(n);if(!0===e.sortKeys)d.sort();else if("function"==typeof e.sortKeys)d.sort(e.sortKeys);else if(e.sortKeys)throw new o("sortKeys must be a boolean or a function");for(r=0,a=d.length;r<a;r+=1)u="",i&&""===p||(u+=Le(e,t)),c=n[l=d[r]],e.replacer&&(c=e.replacer.call(n,l,c)),Ve(e,t+1,l,!0,!0,!0)&&((s=null!==e.tag&&"?"!==e.tag||e.dump&&e.dump.length>1024)&&(e.dump&&10===e.dump.charCodeAt(0)?u+="?":u+="? "),u+=e.dump,s&&(u+=Le(e,t)),Ve(e,t+1,c,!0,s)&&(e.dump&&10===e.dump.charCodeAt(0)?u+=":":u+=": ",p+=u+=e.dump));e.tag=f,e.dump=p||"{}"}(e,t,e.dump,r),f&&(e.dump="&ref_"+p+e.dump)):(!function(e,t,n){var i,r,o,a,l,c="",s=e.tag,u=Object.keys(n);for(i=0,r=u.length;i<r;i+=1)l="",""!==c&&(l+=", "),e.condenseFlow&&(l+='"'),a=n[o=u[i]],e.replacer&&(a=e.replacer.call(n,o,a)),Ve(e,t,o,!1,!1)&&(e.dump.length>1024&&(l+="? "),l+=e.dump+(e.condenseFlow?'"':"")+":"+(e.condenseFlow?"":" "),Ve(e,t,a,!1,!1)&&(c+=l+=e.dump));e.tag=s,e.dump="{"+c+"}"}(e,t,e.dump),f&&(e.dump="&ref_"+p+" "+e.dump));else if("[object Array]"===s)i&&0!==e.dump.length?(e.noArrayIndent&&!l&&t>0?$e(e,t-1,e.dump,r):$e(e,t,e.dump,r),f&&(e.dump="&ref_"+p+e.dump)):(!function(e,t,n){var i,r,o,a="",l=e.tag;for(i=0,r=n.length;i<r;i+=1)o=n[i],e.replacer&&(o=e.replacer.call(n,String(i),o)),(Ve(e,t,o,!1,!1)||void 0===o&&Ve(e,t,null,!1,!1))&&(""!==a&&(a+=","+(e.condenseFlow?"":" ")),a+=e.dump);e.tag=l,e.dump="["+a+"]"}(e,t,e.dump),f&&(e.dump="&ref_"+p+" "+e.dump));else{if("[object String]"!==s){if("[object Undefined]"===s)return!1;if(e.skipInvalid)return!1;throw new o("unacceptable kind of an object to dump "+s)}"?"!==e.tag&&Ke(e,e.dump,t,a,u)}null!==e.tag&&"?"!==e.tag&&(c=encodeURI("!"===e.tag[0]?e.tag.slice(1):e.tag).replace(/!/g,"%21"),c="!"===e.tag[0]?"!"+c:"tag:yaml.org,2002:"===c.slice(0,18)?"!!"+c.slice(18):"!<"+c+">",e.dump=c+" "+e.dump)}return!0}function Ze(e,t){var n,i,r=[],o=[];for(Je(e,r,o),n=0,i=o.length;n<i;n+=1)t.duplicates.push(r[o[n]]);t.usedDuplicates=new Array(i)}function Je(e,t,n){var i,r,o;if(null!==e&&"object"==typeof e)if(-1!==(r=t.indexOf(e)))-1===n.indexOf(r)&&n.push(r);else if(t.push(e),Array.isArray(e))for(r=0,o=e.length;r<o;r+=1)Je(e[r],t,n);else for(r=0,o=(i=Object.keys(e)).length;r<o;r+=1)Je(e[i[r]],t,n)}function Qe(e,t){return function(){throw new Error("Function yaml."+e+" is removed in js-yaml 4. Use yaml."+t+" instead, which is now safe by default.")}}var ze=p,Xe=h,et=b,tt=O,nt=j,it=K,rt=xe.load,ot=xe.loadAll,at={dump:function(e,t){var n=new Ee(t=t||{});n.noRefs||Ze(e,n);var i=e;return n.replacer&&(i=n.replacer.call({"":i},"",i)),Ve(n,0,i,!0,!0)?n.dump+"\n":""}}.dump,lt=o,ct={binary:L,float:S,map:y,null:A,pairs:Y,set:B,timestamp:F,bool:v,int:C,merge:E,omap:U,seq:m,str:g},st=Qe("safeLoad","load"),ut=Qe("safeLoadAll","loadAll"),pt=Qe("safeDump","dump"),ft={Type:ze,Schema:Xe,FAILSAFE_SCHEMA:et,JSON_SCHEMA:tt,CORE_SCHEMA:nt,DEFAULT_SCHEMA:it,load:rt,loadAll:ot,dump:at,YAMLException:lt,types:ct,safeLoad:st,safeLoadAll:ut,safeDump:pt};e.CORE_SCHEMA=nt,e.DEFAULT_SCHEMA=it,e.FAILSAFE_SCHEMA=et,e.JSON_SCHEMA=tt,e.Schema=Xe,e.Type=ze,e.YAMLException=lt,e.default=ft,e.dump=at,e.load=rt,e.loadAll=ot,e.safeDump=pt,e.safeLoad=st,e.safeLoadAll=ut,e.types=ct,Object.defineProperty(e,"__esModule",{value:!0})}));
+
+</script>
+<script>
+/* ================= MythicForge 資料庫（MythicMobs 5.x / MythicCrucible） ================= */
+const DB = {};
+
+DB.CATS = {
+  mobs:       { folder:'mobs',       zh:'怪物',   icon:'👹' },
+  items:      { folder:'items',      zh:'物品',   icon:'⚔' },
+  skills:     { folder:'skills',     zh:'技能',   icon:'✨' },
+  droptables: { folder:'droptables', zh:'掉落表', icon:'🎁' },
+};
+
+/* 生物（1.21.x 完整清單，附繁中名稱） */
+DB.ENTITY_TYPES = [
+["ALLAY","悅靈"],["ARMADILLO","犰狳"],["AXOLOTL","六角恐龍"],["BAT","蝙蝠"],["BEE","蜜蜂"],["BLAZE","烈焰使者"],
+["BOGGED","沼骸"],["BREEZE","旋風使者"],["CAMEL","駱駝"],["CAT","貓"],["CAVE_SPIDER","洞穴蜘蛛"],["CHICKEN","雞"],
+["COD","鱈魚"],["COPPER_GOLEM","銅魔像"],["COW","牛"],["CREAKING","嘎枝"],["CREEPER","苦力怕"],["DOLPHIN","海豚"],
+["DONKEY","驢"],["DROWNED","沉屍"],["ELDER_GUARDIAN","遠古深海守衛"],["ENDERMAN","終界使者"],["ENDERMITE","終界蟎"],
+["ENDER_DRAGON","終界龍"],["EVOKER","喚魔者"],["FOX","狐狸"],["FROG","青蛙"],["GHAST","地獄幽靈"],["GIANT","巨人"],
+["GLOW_SQUID","螢光魷魚"],["GOAT","山羊"],["GUARDIAN","深海守衛"],["HAPPY_GHAST","快樂地獄幽靈"],["HOGLIN","豬布獸"],
+["HORSE","馬"],["HUSK","屍殼"],["ILLUSIONER","幻術師"],["IRON_GOLEM","鐵魔像"],["LLAMA","駱馬"],
+["MAGMA_CUBE","熔岩史萊姆"],["MOOSHROOM","哞菇"],["MULE","騾"],["OCELOT","山貓"],["PANDA","貓熊"],["PARROT","鸚鵡"],
+["PHANTOM","夜魅"],["PIG","豬"],["PIGLIN","豬布林"],["PIGLIN_BRUTE","豬布林蠻兵"],["PILLAGER","掠奪者"],
+["POLAR_BEAR","北極熊"],["PUFFERFISH","河豚"],["RABBIT","兔子"],["RAVAGER","劫毀獸"],["SALMON","鮭魚"],["SHEEP","綿羊"],
+["SHULKER","界伏蚌"],["SILVERFISH","蠹魚"],["SKELETON","骷髏"],["SKELETON_HORSE","骷髏馬"],["SLIME","史萊姆"],
+["SNIFFER","嗅探獸"],["SNOW_GOLEM","雪人"],["SPIDER","蜘蛛"],["SQUID","魷魚"],["STRAY","流髑"],["STRIDER","熾足獸"],
+["TADPOLE","蝌蚪"],["TRADER_LLAMA","行商駱馬"],["TROPICAL_FISH","熱帶魚"],["TURTLE","海龜"],["VEX","惱鬼"],
+["VILLAGER","村民"],["VINDICATOR","衛道士"],["WANDERING_TRADER","流浪商人"],["WARDEN","伏守者"],["WITCH","女巫"],
+["WITHER","凋零怪"],["WITHER_SKELETON","凋零骷髏"],["WOLF","狼"],["ZOGLIN","豬屍獸"],["ZOMBIE","殭屍"],
+["ZOMBIE_HORSE","殭屍馬"],["ZOMBIE_VILLAGER","殭屍村民"],["ZOMBIFIED_PIGLIN","殭屍化豬布林"],
+/* MythicMobs 幼年/特殊變種 */
+["BABY_ZOMBIE","幼年殭屍"],["BABY_ZOMBIE_VILLAGER","幼年殭屍村民"],["BABY_HUSK","幼年屍殼"],["BABY_DROWNED","幼年沉屍"],
+["BABY_PIGLIN","幼年豬布林"],["BABY_PIGLIN_BRUTE","幼年豬布林蠻兵"],["BABY_ZOMBIFIED_PIGLIN","幼年殭屍化豬布林"],
+["BABY_HOGLIN","幼年豬布獸"],["BABY_ZOGLIN","幼年豬屍獸"],["VILLAGER_ZOMBIE","殭屍村民（舊名）"],["POWERED_CREEPER","帶電苦力怕"],
+/* 舊版別名（相容舊教學文章） */
+["MUSHROOM_COW","哞菇（舊名）"],["SNOWMAN","雪人（舊名）"],["PIG_ZOMBIE","殭屍豬人（舊名）"],
+["PIG_ZOMBIE_VILLAGER","殭屍豬人村民（舊名）"],["BABY_PIG_ZOMBIE","幼年殭屍豬人（舊名）"],["BABY_PIG_ZOMBIE_VILLAGER","幼年殭屍豬人村民（舊名）"],
+/* 非生物實體 */
+["ARMOR_STAND","盔甲座"],["ITEM_DISPLAY","物品展示實體"],["BLOCK_DISPLAY","方塊展示實體"],["TEXT_DISPLAY","文字展示實體"],
+["INTERACTION","互動實體"],["MARKER","標記實體"],["AREA_EFFECT_CLOUD","藥水效果雲"],["ARROW","箭"],
+["SPECTRAL_ARROW","光靈箭"],["TRIDENT","三叉戟"],["SNOWBALL","雪球"],["EGG","雞蛋"],["ENDER_PEARL","終界珍珠"],
+["EXPERIENCE_BOTTLE","經驗瓶"],["FIREBALL","火焰彈"],["SMALL_FIREBALL","小火焰彈"],["DRAGON_FIREBALL","龍火焰彈"],
+["WITHER_SKULL","凋零頭顱彈"],["WIND_CHARGE","風彈"],["BREEZE_WIND_CHARGE","旋風使者風彈"],["SHULKER_BULLET","界伏蚌飛彈"],
+["LLAMA_SPIT","駱馬口水"],["EVOKER_FANGS","喚魔者尖牙"],["FALLING_BLOCK","掉落中的方塊"],["TNT","點燃的TNT"],
+["PRIMED_TNT","點燃的TNT（舊名）"],["EXPERIENCE_ORB","經驗球"],["ITEM","掉落物"],["DROPPED_ITEM","掉落物（舊名）"],
+["ITEM_FRAME","物品展示框"],["GLOW_ITEM_FRAME","螢光物品展示框"],["PAINTING","畫"],["END_CRYSTAL","終界水晶"],
+["FIREWORK_ROCKET","煙火"],["LIGHTNING_BOLT","閃電"],["FISHING_BOBBER","釣魚浮標"],["OAK_BOAT","橡木船"],
+["OAK_CHEST_BOAT","橡木儲物船"],["BAMBOO_RAFT","竹筏"],["MINECART","礦車"],["CHEST_MINECART","儲物礦車"],
+["HOPPER_MINECART","漏斗礦車"],["TNT_MINECART","TNT礦車"],["FURNACE_MINECART","熔爐礦車"],
+["COMMAND_BLOCK_MINECART","指令方塊礦車"],["SPAWNER_MINECART","生怪磚礦車"],
+];
+/* 英文 ID → 中文名稱對照表 */
+DB.ENTITY_ZH = Object.fromEntries(DB.ENTITY_TYPES);
+
+DB.MATERIALS = ("stone,cobblestone,dirt,grass_block,oak_planks,oak_log,glass,glass_bottle,sand,gravel,obsidian,bedrock,netherrack,end_stone,amethyst_shard,coal,charcoal,raw_iron,iron_ingot,iron_nugget,raw_gold,gold_ingot,gold_nugget,raw_copper,copper_ingot,diamond,emerald,netherite_ingot,netherite_scrap,lapis_lazuli,redstone,quartz,flint,brick,stick,bowl,string,feather,gunpowder,wheat,wheat_seeds,bread,apple,golden_apple,enchanted_golden_apple,carrot,golden_carrot,potato,baked_potato,poisonous_potato,beetroot,melon_slice,sweet_berries,glow_berries,chorus_fruit,egg,sugar,sugar_cane,cocoa_beans,pumpkin_pie,cookie,cake,honey_bottle,honeycomb,milk_bucket,bucket,water_bucket,lava_bucket,beef,cooked_beef,porkchop,cooked_porkchop,chicken,cooked_chicken,mutton,cooked_mutton,rabbit,cooked_rabbit,cod,cooked_cod,salmon,cooked_salmon,tropical_fish,pufferfish,rotten_flesh,spider_eye,fermented_spider_eye,bone,bone_meal,slime_ball,ender_pearl,ender_eye,blaze_rod,blaze_powder,ghast_tear,nether_star,nether_wart,dragon_breath,dragon_egg,experience_bottle,phantom_membrane,shulker_shell,rabbit_foot,rabbit_hide,turtle_scute,armadillo_scute,leather,ink_sac,glow_ink_sac,prismarine_shard,prismarine_crystals,heart_of_the_sea,nautilus_shell,echo_shard,disc_fragment_5,goat_horn,paper,book,writable_book,written_book,enchanted_book,map,filled_map,compass,recovery_compass,clock,spyglass,name_tag,lead,saddle,item_frame,glow_item_frame,painting,armor_stand,flower_pot,arrow,spectral_arrow,tipped_arrow,bow,crossbow,trident,mace,shield,totem_of_undying,elytra,fishing_rod,carrot_on_a_stick,warped_fungus_on_a_stick,snowball,fire_charge,wind_charge,ender_chest,chest,barrel,shulker_box,potion,splash_potion,lingering_potion,glass_bottle,brewing_stand,cauldron,beacon,conduit,end_crystal,wooden_sword,stone_sword,iron_sword,golden_sword,diamond_sword,netherite_sword,wooden_axe,stone_axe,iron_axe,golden_axe,diamond_axe,netherite_axe,wooden_pickaxe,stone_pickaxe,iron_pickaxe,golden_pickaxe,diamond_pickaxe,netherite_pickaxe,wooden_shovel,stone_shovel,iron_shovel,golden_shovel,diamond_shovel,netherite_shovel,wooden_hoe,stone_hoe,iron_hoe,golden_hoe,diamond_hoe,netherite_hoe,shears,flint_and_steel,leather_helmet,leather_chestplate,leather_leggings,leather_boots,chainmail_helmet,chainmail_chestplate,chainmail_leggings,chainmail_boots,iron_helmet,iron_chestplate,iron_leggings,iron_boots,golden_helmet,golden_chestplate,golden_leggings,golden_boots,diamond_helmet,diamond_chestplate,diamond_leggings,diamond_boots,netherite_helmet,netherite_chestplate,netherite_leggings,netherite_boots,turtle_helmet,player_head,zombie_head,skeleton_skull,wither_skeleton_skull,creeper_head,dragon_head,piglin_head,emerald_block,diamond_block,gold_block,iron_block,netherite_block,redstone_block,lapis_block,coal_block,amethyst_block,torch,soul_torch,lantern,soul_lantern,campfire,soul_campfire,candle,tnt,slime_block,honey_block,magma_block,glowstone,glowstone_dust,sea_lantern,shroomlight,ochre_froglight,verdant_froglight,pearlescent_froglight,crying_obsidian,respawn_anchor,lodestone,anvil,grindstone,smithing_table,enchanting_table,bookshelf,lectern,crafting_table,furnace,blast_furnace,smoker,stonecutter,loom,cartography_table,fletching_table,composter,scaffolding,ladder,rail,powered_rail,minecart,chest_minecart,oak_boat,oak_chest_boat,bamboo_raft,firework_rocket,firework_star,bell,chain,iron_bars,spawner,trial_key,ominous_trial_key,ominous_bottle,breeze_rod,heavy_core,resin_clump,resin_brick,bundle,barrier,structure_void,light,debug_stick,command_block,air").split(",");
+
+DB.ENCHANTS = ("sharpness,smite,bane_of_arthropods,knockback,fire_aspect,looting,sweeping_edge,efficiency,silk_touch,unbreaking,fortune,power,punch,flame,infinity,luck_of_the_sea,lure,loyalty,impaling,riptide,channeling,multishot,quick_charge,piercing,density,breach,wind_burst,mending,protection,fire_protection,feather_falling,blast_protection,projectile_protection,respiration,aqua_affinity,thorns,depth_strider,frost_walker,soul_speed,swift_sneak,binding_curse,vanishing_curse,DURABILITY,DAMAGE_ALL,ARROW_DAMAGE,ARROW_INFINITE,LOOT_BONUS_MOBS,DIG_SPEED,PROTECTION_ENVIRONMENTAL").split(",");
+
+DB.ATTRIBUTES = ("Damage,Health,MovementSpeed,AttackSpeed,Armor,ArmorToughness,KnockbackResistance,Luck,AttackKnockback,MaxHealth,Scale,StepHeight,JumpStrength,BlockInteractionRange,EntityInteractionRange,BlockBreakSpeed,FallDamageMultiplier,Gravity,SafeFallDistance,MiningEfficiency,SneakingSpeed,SubmergedMiningSpeed,SweepingDamageRatio,WaterMovementEfficiency,OxygenBonus,BurningTime,ExplosionKnockbackResistance,MovementEfficiency").split(",");
+
+DB.ATTR_SLOTS = ["All","MainHand","OffHand","Head","Chest","Legs","Feet","Body"];
+DB.HIDE_FLAGS = ["ATTRIBUTES","ENCHANTS","UNBREAKABLE","DESTROYS","PLACED_ON","POTION_EFFECTS","DYE","ARMOR_TRIM","additional_tooltip","tooltip"];
+DB.EQUIP_SLOTS = ["hand","offhand","head","chest","legs","feet"];
+
+DB.AI_GOALS = [
+  ["clear","清除原版 AI（通常放第 0 順位）"],["meleeattack","近戰攻擊目標"],["rangedattack","遠程攻擊（骷髏射箭等）"],
+  ["randomstroll","隨機走動"],["lookatplayers","看著附近玩家"],["float","在水中漂浮"],["gotospawnlocation","走回出生點"],
+  ["gotoowner","走向主人"],["followowner","跟隨主人"],["avoidplayers","躲避玩家"],["breakdoors","破壞門"],["opendoors","開門"],
+  ["eatgrass","吃草"],["fleesun","躲避陽光"],["leapattarget","撲向目標"],["moveindoors","往室內移動"],["movetowardstarget","朝目標移動"],
+  ["panic","受傷後恐慌逃跑"],["restrictsun","避免陽光下活動"],["spiderattack","蜘蛛式攻擊"],["swellattack","苦力怕自爆攻擊"],
+  ["zombieattack","殭屍式攻擊"],["crossbowattack","弩攻擊"],["bowshoot","拉弓射擊"],["patrol","巡邏"],
+];
+DB.AI_TARGETS = [
+  ["clear","清除原版索敵（通常放第 0 順位）"],["attacker","反擊攻擊自己的對象"],["players","主動攻擊玩家"],
+  ["golems","攻擊鐵魔像"],["villagers","攻擊村民"],["monsters","攻擊怪物"],["animals","攻擊動物"],
+  ["ownerattacker","攻擊打主人的對象"],["ownertarget","攻擊主人的目標"],["specificfactions <陣營>","攻擊指定陣營"],
+  ["otherfactions","攻擊其他陣營"],["otherfactionsmonsters","攻擊其他陣營的怪物"],
+];
+
+DB.MOB_OPTIONS = [
+  ["MovementSpeed","移動速度（殭屍預設約 0.23）"],["KnockbackResistance","擊退抗性 0~1"],["FollowRange","索敵/跟隨距離（格）"],
+  ["MaxCombatDistance","超過此距離的攻擊無效，防遠程風箏"],["AttackSpeed","攻擊速度"],["AlwaysShowName","永遠顯示名稱 true/false"],
+  ["ShowHealth","聊天欄顯示血量"],["HealthBar.Enabled","頭上血條（需開啟）"],["Collidable","可被碰撞推動"],
+  ["Despawn","true/false/persistent/chunk — 卸載時是否消失"],["Persistent","常駐不被清除（NPC 建議 true）"],
+  ["PreventOtherDrops","阻止原版掉落物"],["PreventRandomEquipment","阻止隨機裝備生成"],["PreventSunburn","防止日曬燃燒"],
+  ["PreventItemPickup","防止撿取物品"],["PreventLeashing","防止被拴繩"],["PreventRenaming","防止被命名牌改名"],
+  ["PreventMobKillDrops","被此怪殺死的目標不掉落"],["Silent","靜音（不發出原版音效）"],["Glowing","發光輪廓"],
+  ["Invincible","無敵"],["Invisible","隱形"],["NoAI","完全關閉 AI"],["NoDamageTicks","受傷無敵幀（tick）"],
+  ["NoGravity","無重力"],["Interactable","可被互動"],["LockPitch","鎖定頭部俯仰"],["RepeatAllSkills","重複執行所有技能"],
+  ["PassthroughDamage","傷害轉移給騎乘者/主人"],["DigOutOfGround","從地面挖出（防卡地）"],["Scale","模型縮放（1.20.5+）"],
+  ["Baby","幼年型態"],["Angry","憤怒狀態（狼/殭屍豬人）"],["Tameable","可馴服"],["Saddled","裝上鞍"],
+];
+
+DB.DAMAGE_CAUSES = ("ENTITY_ATTACK,ENTITY_SWEEP_ATTACK,PROJECTILE,FALL,FIRE,FIRE_TICK,LAVA,DROWNING,BLOCK_EXPLOSION,ENTITY_EXPLOSION,CONTACT,SUFFOCATION,FALLING_BLOCK,LIGHTNING,POISON,WITHER,MAGIC,THORNS,STARVATION,FREEZE,SONIC_BOOM,VOID,DRAGON_BREATH,HOT_FLOOR,CRAMMING,FLY_INTO_WALL,WORLD_BORDER,CAMPFIRE").split(",");
+
+DB.ITEM_OPTIONS = [
+  ["Unbreakable","無法破壞 true/false"],["Color","皮革裝備/藥水顏色，如 255,0,0 或 #FF0000"],["RepairCost","鐵砧修理成本"],
+  ["SkullOwner","頭顱的玩家名稱"],["SkullTexture","頭顱 Base64 材質"],["Player","頭顱玩家（同 SkullOwner）"],
+  ["ItemModel","物品模型 namespace:id（1.21.2+）"],["Rarity","稀有度 common/uncommon/rare/epic"],
+  ["HideTooltip","完全隱藏提示框"],["MaxStackSize","最大堆疊數量（1.20.5+）"],["FoodNutrition","食物飽食度"],
+  ["FoodSaturation","食物飽和度"],["FoodCanAlwaysEat","飽食時也能吃"],["Glint","強制附魔光效 true/false"],
+];
+
+/* ---- 技能機制（Mechanics） ---- */
+DB.MECHANICS = [
+ {n:"damage",zh:"造成傷害",d:"對目標造成傷害。",p:[["amount","傷害量，可用算式"],["ignoreArmor","無視護甲 true/false"],["preventKnockback","不造成擊退"],["element","傷害元素類型"]]},
+ {n:"basedamage",zh:"倍率傷害",d:"以怪物本身 Damage 屬性的倍率造成傷害。",p:[["multiplier","倍率，如 0.5、2"]]},
+ {n:"percentdamage",zh:"百分比傷害",d:"造成目標最大血量百分比的傷害。",p:[["percent","0.1 = 10%"],["currenthealth","以當前血量計算"]]},
+ {n:"heal",zh:"治療",d:"回復目標生命值。",p:[["amount","回復量"],["overheal","超額轉為吸收護盾"]]},
+ {n:"potion",zh:"藥水效果",d:"給予目標藥水效果。",p:[["type","效果類型，如 POISON、SPEED"],["duration","持續 tick（20=1秒）"],["level","等級（1 起算）"],["particles","顯示粒子"]]},
+ {n:"removepotion",zh:"移除藥水",d:"移除目標身上的藥水效果。",p:[["type","效果類型"]]},
+ {n:"ignite",zh:"點燃",d:"點燃目標。",p:[["ticks","燃燒 tick 數"]]},
+ {n:"sound",zh:"播放音效",d:"在目標位置播放音效。",p:[["s","音效 ID，如 minecraft:entity.blaze.shoot"],["v","音量"],["p","音調 0.5~2"]]},
+ {n:"message",zh:"發送訊息",d:"傳送聊天訊息給目標玩家。",p:[["m","訊息內容，可用 <caster.name> 等變數"]]},
+ {n:"actionmessage",zh:"動作欄訊息",d:"在目標玩家的物品欄上方顯示訊息。",p:[["m","訊息內容"]]},
+ {n:"title",zh:"標題訊息",d:"對目標玩家顯示大標題。",p:[["title","主標題"],["subtitle","副標題"],["d","持續 tick"]]},
+ {n:"speak",zh:"怪物說話",d:"以怪物名義在頭上與聊天欄說話。",p:[["m","說話內容"],["radius","可聽見半徑"],["chatprefix","聊天前綴"]]},
+ {n:"command",zh:"執行指令",d:"以主控台或玩家身份執行指令。",p:[["c","指令內容，可用 <target.name>"],["asCaster","以施法者執行"],["asOp","以 OP 權限執行"]]},
+ {n:"sudoskill",zh:"目標施放技能",d:"讓目標作為施法者執行技能。",p:[["s","技能名稱"]]},
+ {n:"skill",zh:"執行技能",d:"呼叫另一個中繼技能（Metaskill）。",p:[["s","技能名稱"],["sync","同步執行"]]},
+ {n:"randomskill",zh:"隨機技能",d:"從清單中隨機執行一個技能。",p:[["s","技能清單，逗號分隔"]]},
+ {n:"variableskill",zh:"變數技能",d:"執行名稱含變數的技能。",p:[["s","技能名稱"]]},
+ {n:"cancelevent",zh:"取消事件",d:"取消觸發此技能的事件（如攻擊、互動）。",p:[]},
+ {n:"delay",zh:"延遲",d:"暫停此技能後續執行（寫法：- delay 20）。",p:[["ticks","延遲 tick"]]},
+ {n:"gcd",zh:"公共冷卻",d:"設定全域技能冷卻（搭配 offgcd 條件）。",p:[["ticks","冷卻 tick"]]},
+ {n:"projectile",zh:"投射物",d:"發射自訂投射物，命中時執行 onHit 技能。",p:[["onHit","命中執行的技能"],["onTick","飛行中每次執行"],["onEnd","結束時執行"],["v","速度"],["i","tick 間隔"],["hR","水平命中範圍"],["vR","垂直命中範圍"],["d","最大持續 tick"],["sfo","從原點發射"]]},
+ {n:"missile",zh:"追蹤飛彈",d:"發射會追蹤目標的飛彈。",p:[["onHit","命中執行的技能"],["v","速度"],["i","tick 間隔"],["in","轉向靈敏度"],["hR","命中範圍"]]},
+ {n:"orbital",zh:"環繞軌道",d:"在目標周圍生成環繞的軌道效果。",p:[["onTick","每 tick 執行"],["onHit","命中執行"],["radius","半徑"],["points","軌道點數"],["duration","持續 tick"]]},
+ {n:"totem",zh:"圖騰判定區",d:"生成靜止的判定區域，進入者觸發 onHit。",p:[["onHit","命中技能"],["oH","onHit 縮寫"],["onTick","每 tick 技能"],["hr","水平半徑"],["vr","垂直半徑"],["d","持續 tick"],["i","偵測間隔"],["hnp","不命中玩家以外目標"],["md","最大命中數"]]},
+ {n:"aura",zh:"光環/狀態",d:"給目標掛上持續狀態，期間週期執行技能。",p:[["auraName","狀態名稱"],["onTick","每次間隔執行"],["onStart","開始時執行"],["onEnd","結束時執行"],["interval","間隔 tick"],["duration","持續 tick"],["charges","層數"]]},
+ {n:"onattack",zh:"攻擊附魔光環",d:"持續期間，施法者普攻時額外執行技能。",p:[["onAttack","攻擊時執行的技能"],["duration","持續 tick"]]},
+ {n:"ondamaged",zh:"受擊光環",d:"持續期間，受到攻擊時執行技能。",p:[["onDamaged","受擊時執行"],["duration","持續 tick"],["cancelEvent","取消傷害"]]},
+ {n:"summon",zh:"召喚",d:"召喚 MythicMobs 怪物。",p:[["type","怪物內部名稱"],["amount","數量"],["radius","散布半徑"],["onSurface","置於地表"],["inheritThreatTable","繼承仇恨"]]},
+ {n:"remove",zh:"移除實體",d:"直接移除目標實體（非死亡）。",p:[]},
+ {n:"suicide",zh:"自殺",d:"施法者立即死亡（會觸發死亡掉落）。",p:[]},
+ {n:"consume",zh:"吞噬",d:"傷害目標並將傷害轉為自身治療。",p:[["damage","傷害量"],["heal","治療量"]]},
+ {n:"decapitate",zh:"斬首",d:"掉落目標的頭顱。",p:[]},
+ {n:"teleport",zh:"傳送",d:"將施法者傳送到目標位置。",p:[["spreadh","水平散布"],["spreadv","垂直散布"]]},
+ {n:"teleportto",zh:"傳送到座標",d:"將目標傳送到指定位置。",p:[["location","x,y,z 或 world,x,y,z"]]},
+ {n:"leap",zh:"跳躍撲擊",d:"朝目標跳躍。",p:[["velocity","力道"],["noise","落點誤差"]]},
+ {n:"lunge",zh:"衝刺",d:"朝目標方向衝刺。",p:[["velocity","前進力道"],["velocityY","垂直力道"]]},
+ {n:"throw",zh:"拋擲擊飛",d:"將目標拋向空中/擊退。",p:[["velocity","水平力道"],["velocityY","垂直力道"]]},
+ {n:"pull",zh:"拉近",d:"將目標拉向施法者。",p:[["velocity","拉力"]]},
+ {n:"push",zh:"推開",d:"將目標推離。",p:[["velocity","推力"]]},
+ {n:"velocity",zh:"設定速度向量",d:"直接修改目標速度。",p:[["mode","set/add/multiply"],["velocityX","X"],["velocityY","Y"],["velocityZ","Z"]]},
+ {n:"setspeed",zh:"設定移速",d:"修改目標移動速度屬性。",p:[["speed","倍率或數值"],["type","walk/fly"]]},
+ {n:"lightning",zh:"閃電",d:"在目標位置劈下閃電。",p:[["damage","傷害"]]},
+ {n:"fakelightning",zh:"假閃電",d:"只有視覺效果的閃電。",p:[]},
+ {n:"explosion",zh:"爆炸",d:"在目標位置產生爆炸。",p:[["yield","威力（TNT=4）"],["blockdamage","破壞方塊"],["fire","產生火焰"]]},
+ {n:"particles",zh:"粒子效果",d:"在目標位置產生粒子。",p:[["particle","粒子類型，如 flame"],["amount","數量"],["speed","速度"],["hS","水平散布"],["vS","垂直散布"],["y","Y 偏移"]]},
+ {n:"particlesphere",zh:"粒子球",d:"產生球形粒子。",p:[["particle","粒子類型"],["amount","數量"],["radius","半徑"]]},
+ {n:"particleline",zh:"粒子連線",d:"從施法者到目標畫粒子線。",p:[["particle","粒子類型"],["distanceBetween","點間距"],["fromOrigin","從原點出發"]]},
+ {n:"particlering",zh:"粒子環",d:"產生環形粒子。",p:[["particle","粒子類型"],["radius","半徑"],["points","點數"]]},
+ {n:"effect:smokeswirl",zh:"煙霧漩渦",d:"產生煙霧漩渦特效。",p:[["duration","持續 tick"],["interval","間隔"]]},
+ {n:"blockmask",zh:"方塊偽裝區",d:"讓目標區域的方塊看起來變成別的方塊（僅視覺）。",p:[["material","方塊材質"],["radius","半徑"],["duration","持續 tick"],["shape","sphere/cube"]]},
+ {n:"dropitem",zh:"掉落物品",d:"在目標位置掉落物品。",p:[["items","物品清單，如 diamond 1 0.5"],["naturally","自然彈出"]]},
+ {n:"giveitem",zh:"給予物品",d:"直接把物品放進目標玩家背包。",p:[["item","MM/Crucible 物品名或材質"],["amount","數量"]]},
+ {n:"takeitem",zh:"拿走物品",d:"從目標玩家背包移除物品。",p:[["item","物品名"],["amount","數量"]]},
+ {n:"equip",zh:"裝備物品",d:"讓目標穿上/持有物品。",p:[["item","物品名:部位，如 diamond_helmet:head"]]},
+ {n:"experience",zh:"給予經驗",d:"給目標玩家經驗值。",p:[["amount","經驗量"],["level","改為給等級"]]},
+ {n:"feed",zh:"餵食",d:"回復目標玩家飽食度。",p:[["amount","飽食度"],["saturation","飽和度"]]},
+ {n:"cure",zh:"淨化",d:"移除目標所有負面藥水效果。",p:[]},
+ {n:"shieldbreak",zh:"破盾",d:"讓目標玩家的盾牌進入冷卻。",p:[["duration","冷卻 tick"]]},
+ {n:"threat",zh:"仇恨值",d:"增減目標對施法者的仇恨值。",p:[["amount","仇恨量，可為負"],["mode","add/set/multiply"]]},
+ {n:"settarget",zh:"設定目標",d:"強制施法者鎖定攻擊目標。",p:[]},
+ {n:"cleartarget",zh:"清除目標",d:"清除施法者當前攻擊目標。",p:[]},
+ {n:"rally",zh:"呼叫增援",d:"呼叫附近同伴一起攻擊目標。",p:[["types","怪物類型"],["radius","半徑"]]},
+ {n:"signal",zh:"發送信號",d:"對目標怪物發送信號，觸發其 ~onSignal。",p:[["s","信號名稱"]]},
+ {n:"setvariable",zh:"設定變數",d:"設定變數值（skill/caster/target/world/global 範圍）。",p:[["var","範圍.名稱，如 caster.stage"],["value","值"],["type","INTEGER/FLOAT/STRING"],["duration","有效 tick"]]},
+ {n:"variablemath",zh:"變數運算",d:"對數值變數做四則運算。",p:[["var","範圍.名稱"],["equation","算式，如 <caster.var.x>+1"]]},
+ {n:"setstance",zh:"設定姿態",d:"設定施法者姿態（搭配 stance 條件做階段戰）。",p:[["stance","姿態名稱"]]},
+ {n:"setlevel",zh:"設定等級",d:"修改怪物等級。",p:[["level","等級"]]},
+ {n:"sethealth",zh:"設定血量",d:"直接設定目標血量。",p:[["amount","血量"]]},
+ {n:"modifymobscore",zh:"修改計分板",d:"修改目標計分板分數。",p:[["objective","計分板目標"],["value","值"],["action","SET/ADD"]]},
+ {n:"mount",zh:"騎乘",d:"讓施法者騎上目標。",p:[]},
+ {n:"dismount",zh:"解除騎乘",d:"讓施法者離開坐騎。",p:[]},
+ {n:"disguise",zh:"偽裝",d:"更改怪物外觀（需 LibsDisguises）。",p:[["d","偽裝類型"]]},
+ {n:"undisguise",zh:"解除偽裝",d:"移除偽裝。",p:[]},
+ {n:"glow",zh:"發光",d:"讓目標顯示發光輪廓（需 GlowAPI 或 1.9+）。",p:[["color","顏色"]]},
+ {n:"state",zh:"模型動畫狀態",d:"【ModelEngine】播放模型動畫狀態。",p:[["s","動畫名稱"],["li","過渡進入 tick"],["lo","過渡離開 tick"],["sp","播放速度"]]},
+ {n:"defaultstate",zh:"預設動畫",d:"【ModelEngine】設定模型預設動畫。",p:[["s","動畫名稱"],["type","idle/walk 等"]]},
+ {n:"lockmodel",zh:"鎖定模型朝向",d:"【ModelEngine】鎖定/解鎖模型旋轉。",p:[["l","true=鎖定"]]},
+ {n:"model",zh:"套用模型",d:"【ModelEngine】為目標套用模型。",p:[["mid","模型 ID"],["r","移除模型"]]},
+ {n:"prison",zh:"方塊監牢",d:"用方塊困住目標。",p:[["material","方塊材質"],["duration","持續 tick"],["breakable","可被打破"]]},
+ {n:"stun",zh:"暈眩",d:"使目標無法移動。",p:[["duration","持續 tick"],["facing","仍可轉向"]]},
+ {n:"slow",zh:"緩速",d:"給予目標緩速（等同 potion SLOW）。",p:[["duration","持續 tick"],["level","等級"]]},
+ {n:"freeze",zh:"冰凍",d:"凍結目標（細雪效果）。",p:[["ticks","持續 tick"]]},
+ {n:"oxygen",zh:"氧氣",d:"回復目標玩家氧氣。",p:[["amount","氧氣量"]]},
+ {n:"closeinventory",zh:"關閉背包",d:"強制關閉目標玩家開啟的介面。",p:[]},
+ {n:"bossborder",zh:"Boss 結界",d:"以世界邊界效果顯示 Boss 領域。",p:[["radius","半徑"]]},
+ {n:"time",zh:"設定時間",d:"設定世界時間。",p:[["mode","set/add"],["amount","時間值"]]},
+ {n:"weather",zh:"設定天氣",d:"設定世界天氣。",p:[["type","clear/rain/storm"],["duration","持續 tick"]]},
+ {n:"setblock",zh:"放置方塊",d:"在目標位置放置方塊。",p:[["material","方塊材質"]]},
+ {n:"breakblock",zh:"破壞方塊",d:"破壞目標位置的方塊。",p:[["doDrops","掉落物品"],["doEffect","破壞特效"]]},
+ {n:"fillchest",zh:"填充箱子",d:"用掉落表填充目標位置的箱子。",p:[["items","掉落表名稱"]]},
+ {n:"barrierwall",zh:"屏障牆",d:"生成暫時的屏障牆阻擋。",p:[["duration","持續 tick"],["width","寬"],["height","高"]]},
+];
+
+/* ---- 目標器（Targeters） ---- */
+DB.TARGETERS = [
+ {n:"@self",zh:"施法者自己"},{n:"@target",zh:"當前攻擊目標"},{n:"@trigger",zh:"觸發此技能的對象（如攻擊者、互動的玩家）"},
+ {n:"@parent",zh:"召喚者/父實體"},{n:"@owner",zh:"主人"},{n:"@mount",zh:"坐騎"},{n:"@passenger",zh:"騎在自己身上的實體"},
+ {n:"@children",zh:"自己召喚出的實體"},{n:"@siblings",zh:"同一召喚者的其他實體"},
+ {n:"@PlayersInRadius",zh:"半徑內所有玩家",p:[["r","半徑"]]},{n:"@PIR",zh:"半徑內所有玩家（縮寫）",p:[["r","半徑"]]},
+ {n:"@EntitiesInRadius",zh:"半徑內所有實體",p:[["r","半徑"]]},{n:"@EIR",zh:"半徑內所有實體（縮寫）",p:[["r","半徑"]]},
+ {n:"@MobsInRadius",zh:"半徑內指定 MM 怪物",p:[["r","半徑"],["types","怪物名稱"]]},
+ {n:"@LivingInCone",zh:"面前扇形範圍內的生物",p:[["a","角度"],["r","距離"]]},
+ {n:"@NearestPlayer",zh:"最近的玩家",p:[["r","搜尋半徑"]]},
+ {n:"@ThreatTable",zh:"仇恨表上所有對象"},{n:"@ThreatTablePlayers",zh:"仇恨表上的玩家"},
+ {n:"@RandomThreatTarget",zh:"仇恨表隨機一名"},
+ {n:"@TargetLocation",zh:"目標所在位置（座標）"},{n:"@SelfLocation",zh:"自身所在位置（座標）"},
+ {n:"@Origin",zh:"技能原點（投射物命中點等）"},{n:"@Forward",zh:"面前方位置",p:[["f","前方格數"],["y","Y 偏移"]]},
+ {n:"@ProjectileForward",zh:"投射物前方",p:[["f","前方格數"]]},
+ {n:"@Ring",zh:"環形座標點",p:[["radius","半徑"],["points","點數"]]},
+ {n:"@RingAroundOrigin",zh:"原點環形座標",p:[["radius","半徑"],["points","點數"]]},
+ {n:"@Cone",zh:"錐形座標點",p:[["angle","角度"],["range","距離"],["points","點數"]]},
+ {n:"@RandomLocationsNearCaster",zh:"施法者附近隨機座標",p:[["amount","數量"],["radius","半徑"]]},
+ {n:"@RandomLocationsNearTargets",zh:"目標附近隨機座標",p:[["amount","數量"],["radius","半徑"]]},
+ {n:"@Location",zh:"指定座標",p:[["c","x,y,z"]]},
+ {n:"@BlocksInRadius",zh:"半徑內方塊",p:[["r","半徑"]]},
+ {n:"@Spawner",zh:"生成器位置",p:[["s","生成器名稱"]]},
+ {n:"@SpawnLocation",zh:"出生點位置"},
+ {n:"@modelpart",zh:"【ModelEngine】模型部件位置",p:[["pid","部件 ID"],["o","偏移基準 model"],["x","X 偏移"],["y","Y 偏移"],["z","Z 偏移"]]},
+ {n:"@ItemsInRadius",zh:"半徑內掉落物",p:[["r","半徑"]]},
+ {n:"@Casters",zh:"所有施放此技能的怪物"},
+];
+
+/* ---- 觸發器（Triggers）scope: mob=怪物 item=Crucible物品 ---- */
+DB.TRIGGERS = [
+ {n:"~onSpawn",zh:"生成時",s:"mob"},{n:"~onDeath",zh:"死亡時",s:"mob"},{n:"~onFirstSpawn",zh:"首次生成（非重載）",s:"mob"},
+ {n:"~onAttack",zh:"攻擊命中時",s:"mob"},{n:"~onDamaged",zh:"受到傷害時",s:"mob"},{n:"~onTimer:100",zh:"每 N tick（冒號後填 tick）",s:"both"},
+ {n:"~onInteract",zh:"被玩家右鍵互動",s:"mob"},{n:"~onCombat",zh:"進入戰鬥狀態",s:"mob"},
+ {n:"~onEnterCombat",zh:"開始戰鬥",s:"mob"},{n:"~onDropCombat",zh:"脫離戰鬥",s:"mob"},
+ {n:"~onTargetChange",zh:"切換目標時",s:"mob"},{n:"~onKillPlayer",zh:"殺死玩家時",s:"mob"},{n:"~onKill",zh:"殺死任何目標",s:"mob"},
+ {n:"~onSignal:信號名",zh:"收到信號（signal 機制）",s:"both"},{n:"~onShoot",zh:"射出投射物時",s:"mob"},
+ {n:"~onBowHit",zh:"箭矢命中時",s:"mob"},{n:"~onTeleport",zh:"傳送時（終界使者）",s:"mob"},
+ {n:"~onExplode",zh:"爆炸時（苦力怕）",s:"mob"},{n:"~onPrime",zh:"開始自爆倒數",s:"mob"},
+ {n:"~onCreeperCharge",zh:"被閃電充能",s:"mob"},{n:"~onChangeWorld",zh:"切換世界",s:"mob"},
+ {n:"~onDespawned",zh:"消失時",s:"mob"},{n:"~onSkillDamage",zh:"技能傷害命中時",s:"mob"},
+ {n:"~onUse",zh:"右鍵使用物品",s:"item"},{n:"~onRightClick",zh:"右鍵點擊",s:"item"},{n:"~onLeftClick",zh:"左鍵點擊",s:"item"},
+ {n:"~onHit",zh:"用此武器攻擊命中",s:"item"},{n:"~onAttack",zh:"用此武器攻擊",s:"item"},
+ {n:"~onConsume",zh:"吃/喝下物品",s:"item"},{n:"~onCrouch",zh:"蹲下時",s:"item"},{n:"~onJump",zh:"跳躍時",s:"item"},
+ {n:"~onSwing",zh:"揮動（左鍵）",s:"item"},{n:"~onBlockBreak",zh:"破壞方塊時",s:"item"},{n:"~onBlockPlace",zh:"放置方塊時",s:"item"},
+ {n:"~onPickup",zh:"撿起物品時",s:"item"},{n:"~onDrop",zh:"丟棄物品時",s:"item"},{n:"~onEquip",zh:"穿上裝備時",s:"item"},
+ {n:"~onUnequip",zh:"脫下裝備時",s:"item"},{n:"~onBowShoot",zh:"用此弓射箭時",s:"item"},{n:"~onFish",zh:"釣魚時",s:"item"},
+];
+
+/* ---- 條件（Conditions） ---- */
+DB.CONDITIONS = [
+ {n:"health",zh:"血量條件",p:[["h","如 <0.5（50%以下）、>10、10to20"]],d:"檢查目標血量，支援百分比與區間。"},
+ {n:"targetwithin",zh:"目標距離內",p:[["d","距離"]],d:"攻擊目標在指定距離內。"},
+ {n:"targetnotwithin",zh:"目標距離外",p:[["d","距離"]],d:"攻擊目標在指定距離外。"},
+ {n:"distance",zh:"與觸發者距離",p:[["d","如 <10"]],d:"與觸發對象的距離。"},
+ {n:"playerwithin",zh:"玩家在附近",p:[["d","距離"]],d:"指定距離內有玩家。"},
+ {n:"playernotwithin",zh:"附近無玩家",p:[["d","距離"]],d:"指定距離內沒有玩家。"},
+ {n:"mobsinradius",zh:"半徑內怪物數",p:[["types","怪物名稱"],["radius","半徑"],["amount","數量條件，如 <5"]],d:"檢查附近指定怪物數量。"},
+ {n:"moving",zh:"移動中",p:[],d:"目標是否正在移動（true/false 寫在條件後）。"},
+ {n:"onground",zh:"在地面上",p:[],d:"目標是否站在地面。"},
+ {n:"inblock",zh:"在方塊中",p:[["b","方塊清單，如 WATER,LAVA"]],d:"目標所在位置的方塊類型。"},
+ {n:"onblock",zh:"站在方塊上",p:[["b","方塊類型"]],d:"目標腳下的方塊類型。"},
+ {n:"incombat",zh:"戰鬥中",p:[],d:"怪物是否處於戰鬥狀態。"},
+ {n:"hastarget",zh:"有攻擊目標",p:[],d:"怪物是否有鎖定目標。"},
+ {n:"hasaura",zh:"擁有光環",p:[["aura","光環名稱"]],d:"目標是否有指定 aura 狀態。"},
+ {n:"hasauraskill",zh:"擁有光環（同上）",p:[["skill","光環名稱"]],d:"別名。"},
+ {n:"haspotioneffect",zh:"有藥水效果",p:[["type","效果類型"],["level","等級區間"]],d:"目標是否有指定藥水效果。"},
+ {n:"stance",zh:"姿態",p:[["s","姿態名稱"]],d:"施法者當前姿態（setstance 設定）。"},
+ {n:"level",zh:"怪物等級",p:[["l","如 >5"]],d:"檢查怪物等級。"},
+ {n:"chance",zh:"機率",p:[["c","0~1，如 0.3"]],d:"隨機機率通過。"},
+ {n:"offgcd",zh:"不在公共冷卻",p:[],d:"施法者不在 GCD 中（搭配 gcd 機制）。"},
+ {n:"day",zh:"白天",p:[],d:"世界時間為白天。"},
+ {n:"night",zh:"夜晚",p:[],d:"世界時間為夜晚。"},
+ {n:"sunny",zh:"晴天",p:[],d:"天氣晴朗。"},
+ {n:"raining",zh:"下雨",p:[],d:"正在下雨。"},
+ {n:"thundering",zh:"雷雨",p:[],d:"正在打雷。"},
+ {n:"world",zh:"世界",p:[["w","世界名稱"]],d:"目標所在世界。"},
+ {n:"biome",zh:"生態域",p:[["b","生態域，如 DESERT"]],d:"目標所在生態域。"},
+ {n:"region",zh:"WG 區域",p:[["r","區域名稱"]],d:"【需 WorldGuard】目標在指定區域內。"},
+ {n:"altitude",zh:"離地高度",p:[["a","如 >5"]],d:"目標離地面的高度。"},
+ {n:"yaw",zh:"水平朝向",p:[["y","角度區間"]],d:"目標的水平視角。"},
+ {n:"lightlevel",zh:"光照等級",p:[["l","如 <7"]],d:"目標位置光照。"},
+ {n:"entitytype",zh:"實體類型",p:[["t","類型清單"]],d:"目標的實體類型。"},
+ {n:"mythicmobtype",zh:"MM 怪物類型",p:[["t","怪物名稱"]],d:"目標是指定的 MythicMobs 怪物。"},
+ {n:"isplayer",zh:"是玩家",p:[],d:"目標是玩家。"},
+ {n:"ismonster",zh:"是怪物",p:[],d:"目標是敵對生物。"},
+ {n:"isliving",zh:"是活體",p:[],d:"目標是活著的生物。"},
+ {n:"iscaster",zh:"是施法者",p:[],d:"目標就是施法者本人。"},
+ {n:"owner",zh:"是主人",p:[],d:"目標是施法者的主人。"},
+ {n:"sneaking",zh:"蹲下中",p:[],d:"目標玩家正在潛行。"},
+ {n:"sprinting",zh:"疾跑中",p:[],d:"目標玩家正在疾跑。"},
+ {n:"blocking",zh:"舉盾中",p:[],d:"目標玩家正在格擋。"},
+ {n:"gliding",zh:"滑翔中",p:[],d:"目標正在鞘翅滑翔。"},
+ {n:"burning",zh:"燃燒中",p:[],d:"目標正在燃燒。"},
+ {n:"holding",zh:"手持物品",p:[["m","材質或 MM 物品名"]],d:"目標手上拿著指定物品。"},
+ {n:"wearing",zh:"穿戴裝備",p:[["slot","部位"],["m","物品"]],d:"目標穿著指定裝備。"},
+ {n:"score",zh:"計分板分數",p:[["o","計分板目標"],["v","分數條件"]],d:"檢查計分板分數。"},
+ {n:"variableequals",zh:"變數等於",p:[["var","範圍.名稱"],["value","值"]],d:"變數值等於指定值。"},
+ {n:"variableinrange",zh:"變數區間",p:[["var","範圍.名稱"],["range","如 1to5"]],d:"數值變數在區間內。"},
+ {n:"variableisset",zh:"變數已設定",p:[["var","範圍.名稱"]],d:"變數存在。"},
+ {n:"faction",zh:"陣營",p:[["f","陣營名稱"]],d:"目標的 MM 陣營。"},
+ {n:"samefaction",zh:"同陣營",p:[],d:"目標與施法者同陣營。"},
+ {n:"children",zh:"召喚物數量",p:[["a","如 <3"]],d:"施法者召喚物的數量。"},
+ {n:"creeperprimed",zh:"苦力怕點燃中",p:[],d:"苦力怕正在自爆倒數。"},
+ {n:"fieldofview",zh:"視野角度內",p:[["a","角度"]],d:"目標在施法者視野內。"},
+ {n:"lineofsight",zh:"視線可及",p:[],d:"施法者能直接看到目標。"},
+ {n:"cuboid",zh:"長方體區域",p:[["c","x1,y1,z1,x2,y2,z2"]],d:"目標在指定座標區域內。"},
+ {n:"height",zh:"Y 座標",p:[["h","如 <60"]],d:"目標的 Y 座標。"},
+ {n:"dawn",zh:"清晨",p:[],d:"時間為清晨。"},{n:"dusk",zh:"黃昏",p:[],d:"時間為黃昏。"},
+ {n:"premium",zh:"付費版",p:[],d:"伺服器使用 MythicMobs 付費版。"},
+];
+
+DB.POTION_TYPES = ("SPEED,SLOWNESS,HASTE,MINING_FATIGUE,STRENGTH,INSTANT_HEALTH,INSTANT_DAMAGE,JUMP_BOOST,NAUSEA,REGENERATION,RESISTANCE,FIRE_RESISTANCE,WATER_BREATHING,INVISIBILITY,BLINDNESS,NIGHT_VISION,HUNGER,WEAKNESS,POISON,WITHER,HEALTH_BOOST,ABSORPTION,SATURATION,GLOWING,LEVITATION,LUCK,UNLUCK,SLOW_FALLING,CONDUIT_POWER,DOLPHINS_GRACE,BAD_OMEN,HERO_OF_THE_VILLAGE,DARKNESS,TRIAL_OMEN,RAID_OMEN,WIND_CHARGED,WEAVING,OOZING,INFESTED").split(",");
+
+/* Crucible 物品的 Type 值 */
+DB.ITEM_TYPES = ["", "FURNITURE", "BLOCK", "GENERATION"];
+
+</script>
+<script>
+/* ================= MythicForge 主程式 ================= */
+'use strict';
+
+/* ---------- 小工具 ---------- */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+function el(tag, attrs = {}, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)){
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null) e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()){
+    if (kid == null) continue;
+    e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  }
+  return e;
+}
+function toast(msg, type = 'info', ms = 3200){
+  const t = el('div', {class: 'toast ' + type}, msg);
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), ms);
+}
+function debounce(fn, ms){ let h; return (...a)=>{ clearTimeout(h); h=setTimeout(()=>fn(...a), ms); }; }
+
+/* ---------- 狀態 ---------- */
+const state = {
+  root: null,                 // MythicMobs 資料夾 handle
+  cat: 'mobs',
+  files: { mobs: [], items: [], skills: [], droptables: [] },
+  sel: null,                  // { file, key }
+  view: 'form',
+  search: '',
+};
+/* file 結構: { cat, relPath, name, handle, parentDir, text, data:{}, order:[],
+                dirtyKeys:Set, deletedKeys:Set, loadError } */
+
+function isDirty(f){ return f.dirtyKeys.size > 0 || f.deletedKeys.size > 0 || f.fullRewrite === true; }
+function anyDirty(){ return Object.values(state.files).flat().some(isDirty); }
+function markDirty(key){
+  if (!state.sel) return;
+  state.sel.file.dirtyKeys.add(key ?? state.sel.key);
+  renderTree();
+}
+
+/* ---------- IndexedDB：記住資料夾 ---------- */
+const idb = {
+  open(){ return new Promise((res, rej) => {
+    const r = indexedDB.open('mythicforge', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });},
+  async set(k, v){ const db = await this.open();
+    return new Promise((res, rej) => { const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); },
+  async get(k){ const db = await this.open();
+    return new Promise((res, rej) => { const rq = db.transaction('kv').objectStore('kv').get(k);
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); }); },
+};
+
+/* ---------- YAML 區塊解析與拼接（保留未編輯條目與註解） ---------- */
+function findBlocks(text){
+  const lines = text.split(/\r?\n/);
+  const blocks = [];
+  let cur = null;
+  for (let i = 0; i < lines.length; i++){
+    const ln = lines[i];
+    if (/^[^\s#-]/.test(ln) && ln.includes(':')){
+      if (cur){ cur.end = trimBlockEnd(lines, cur.start, i - 1); blocks.push(cur); }
+      let key = ln.slice(0, ln.indexOf(':')).trim();
+      key = key.replace(/^['"]|['"]$/g, '');
+      cur = { key, start: i, end: lines.length - 1 };
+    }
+  }
+  if (cur){ cur.end = trimBlockEnd(lines, cur.start, lines.length - 1); blocks.push(cur); }
+  return { lines, blocks };
+}
+/* 區塊結尾往回縮：尾端的空行與註解行屬於「條目之間的空隙」，保留不動 */
+function trimBlockEnd(lines, start, end){
+  while (end > start && (lines[end].trim() === '' || /^\s*#/.test(lines[end]))) end--;
+  return end;
+}
+function blockHasInnerComments(f, key){
+  const { lines, blocks } = findBlocks(f.text);
+  const b = blocks.find(x => x.key === key);
+  if (!b) return false;
+  for (let i = b.start; i <= b.end; i++) if (/^\s*#/.test(lines[i])) return true;
+  return false;
+}
+function dumpEntry(key, obj){
+  return jsyaml.dump({ [key]: obj }, { indent: 2, lineWidth: -1, noRefs: true }).replace(/\n+$/, '');
+}
+function buildFileText(f){
+  const { lines, blocks } = findBlocks(f.text);
+  const out = lines.slice();
+  const ops = [];
+  for (const b of blocks){
+    if (f.deletedKeys.has(b.key)) ops.push({ ...b, repl: null });
+    else if (f.dirtyKeys.has(b.key) && f.data[b.key] !== undefined) ops.push({ ...b, repl: dumpEntry(b.key, f.data[b.key]) });
+  }
+  ops.sort((a, b) => b.start - a.start);
+  for (const op of ops) out.splice(op.start, op.end - op.start + 1, ...(op.repl !== null ? op.repl.split('\n') : []));
+  const known = new Set(blocks.map(b => b.key));
+  for (const k of f.order){
+    if (!known.has(k) && !f.deletedKeys.has(k) && f.data[k] !== undefined){
+      if (out.length && out[out.length - 1].trim() !== '') out.push('');
+      out.push(...dumpEntry(k, f.data[k]).split('\n'));
+    }
+  }
+  let txt = out.join('\n');
+  if (!txt.endsWith('\n')) txt += '\n';
+  return txt;
+}
+
+/* ---------- 檔案系統 ---------- */
+async function openFolder(){
+  if (!window.showDirectoryPicker){
+    toast('此瀏覽器不支援資料夾讀寫，請改用 Chrome 或 Edge 開啟本工具。', 'err', 6000);
+    return;
+  }
+  try {
+    const h = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await useRoot(h);
+    await idb.set('root', h).catch(() => {});
+  } catch (e){ if (e.name !== 'AbortError') toast('開啟資料夾失敗：' + e.message, 'err'); }
+}
+async function useRoot(h){
+  // 容錯：使用者可能選了 plugins 或伺服器根目錄
+  let root = h;
+  if (h.name.toLowerCase() !== 'mythicmobs'){
+    const candidates = ['MythicMobs', 'plugins/MythicMobs'];
+    for (const c of candidates){
+      try {
+        let cur = h;
+        for (const part of c.split('/')) cur = await cur.getDirectoryHandle(part);
+        root = cur; break;
+      } catch {}
+    }
+  }
+  state.root = root;
+  $('#folder-name').textContent = '📁 ' + root.name;
+  $('#fs-pill').textContent = '已連接'; $('#fs-pill').classList.add('ok');
+  $('#btn-reload').style.display = '';
+  await loadAll();
+}
+async function scanDir(dir, base = ''){
+  const out = [];
+  for await (const entry of dir.values()){
+    if (entry.kind === 'directory'){
+      if (entry.name.startsWith('.')) continue;
+      out.push(...await scanDir(entry, base + entry.name + '/'));
+    } else if (/\.ya?ml$/i.test(entry.name)){
+      out.push({ relPath: base + entry.name, handle: entry, parentDir: dir });
+    }
+  }
+  return out;
+}
+async function loadAll(){
+  for (const cat of Object.keys(DB.CATS)){
+    state.files[cat] = [];
+    let dir;
+    try { dir = await state.root.getDirectoryHandle(DB.CATS[cat].folder); }
+    catch { continue; }
+    const raw = await scanDir(dir);
+    for (const r of raw){
+      const f = { cat, relPath: r.relPath, name: r.relPath.split('/').pop(), handle: r.handle,
+                  parentDir: r.parentDir, text: '', data: {}, order: [],
+                  dirtyKeys: new Set(), deletedKeys: new Set(), loadError: null };
+      try {
+        const file = await r.handle.getFile();
+        f.text = await file.text();
+        const d = jsyaml.load(f.text);
+        if (d !== null && (typeof d !== 'object' || Array.isArray(d))) throw new Error('檔案頂層不是鍵值結構');
+        f.data = d || {};
+        f.order = Object.keys(f.data);
+      } catch (e){ f.loadError = e.message; }
+      state.files[cat].push(f);
+    }
+    state.files[cat].sort((a, b) => a.relPath.localeCompare(b.relPath));
+  }
+  state.sel = null;
+  renderCatTabs(); renderTree(); showWelcome();
+  const total = Object.values(state.files).flat().length;
+  toast(`載入完成：共 ${total} 個 YAML 檔案`, 'ok');
+}
+async function saveFile(f){
+  if (!isDirty(f)) { toast('沒有變更需要儲存', 'info'); return; }
+  const inner = [...f.dirtyKeys].filter(k => blockHasInnerComments(f, k));
+  try {
+    const txt = buildFileText(f);
+    jsyaml.load(txt); // 寫入前驗證
+    const w = await f.handle.createWritable();
+    await w.write(txt); await w.close();
+    f.text = txt; f.dirtyKeys.clear(); f.deletedKeys.clear(); f.fullRewrite = false;
+    renderTree(); renderEditorHead();
+    toast(`💾 已儲存 ${f.name}${inner.length ? '（注意：條目內部註解已移除）' : ''}，記得 /mm reload`, 'ok', 4000);
+  } catch (e){ toast('儲存失敗：' + e.message, 'err', 6000); }
+}
+
+/* ---------- 分類與樹狀清單 ---------- */
+function renderCatTabs(){
+  const box = $('#cat-tabs'); box.innerHTML = '';
+  for (const [cat, c] of Object.entries(DB.CATS)){
+    const cnt = state.files[cat].reduce((n, f) => n + f.order.filter(k => !f.deletedKeys.has(k)).length, 0);
+    const b = el('button', { class: cat === state.cat ? 'active' : '', onclick: () => { state.cat = cat; renderCatTabs(); renderTree(); } },
+      `${c.icon} ${c.zh}`, el('span', { class: 'cnt' }, String(cnt)));
+    box.append(b);
+  }
+}
+const expandedFiles = new Set();
+function renderTree(){
+  const tree = $('#tree'); tree.innerHTML = '';
+  const files = state.files[state.cat];
+  const q = state.search.trim().toLowerCase();
+  if (!state.root){
+    tree.append(el('div', { class: 'tree-empty' }, '尚未連接資料夾', el('br'), '點右上角「開啟 MythicMobs 資料夾」'));
+    return;
+  }
+  if (!files.length){
+    tree.append(el('div', { class: 'tree-empty' }, `此分類（${DB.CATS[state.cat].folder}/）沒有 YAML 檔案`, el('br'), '可點上方「＋檔案」新增'));
+    return;
+  }
+  const groups = {};
+  for (const f of files){
+    const dir = f.relPath.includes('/') ? f.relPath.slice(0, f.relPath.lastIndexOf('/')) : '';
+    (groups[dir] ??= []).push(f);
+  }
+  for (const dir of Object.keys(groups).sort()){
+    const folderEl = el('div', { class: 'tree-folder' });
+    if (dir !== ''){
+      const hd = el('div', { class: 'hd', onclick: () => { folderEl.classList.toggle('collapsed'); } },
+        el('span', { class: 'tw' }, '▾'), '📁 ' + dir);
+      folderEl.append(hd);
+    }
+    const body = el('div', { class: 'body' });
+    for (const f of groups[dir]) body.append(renderFileNode(f, q));
+    folderEl.append(body);
+    tree.append(folderEl);
+  }
+}
+function renderFileNode(f, q){
+  const fileEl = el('div', { class: 'tree-file' });
+  const keys = f.order.filter(k => !f.deletedKeys.has(k));
+  const matched = q ? keys.filter(k => entryMatches(f, k, q)) : keys;
+  if (q && !matched.length && !f.name.toLowerCase().includes(q)){ fileEl.style.display = 'none'; return fileEl; }
+  const open = q ? true : expandedFiles.has(f.cat + '/' + f.relPath);
+  if (!open) fileEl.classList.add('collapsed');
+  const activeFile = state.sel && state.sel.file === f && state.sel.key === null;
+  const hd = el('div', { class: 'hd', style: activeFile ? 'background:var(--accent-dim);color:#fff' : '' },
+    el('span', { class: 'tw', title: '展開/收合', onclick: e => {
+      e.stopPropagation();
+      const id = f.cat + '/' + f.relPath;
+      fileEl.classList.toggle('collapsed');
+      fileEl.classList.contains('collapsed') ? expandedFiles.delete(id) : expandedFiles.add(id);
+    } }, '▾'), '📄',
+    el('span', { class: 'nm', title: f.relPath }, f.name),
+    isDirty(f) ? el('span', { class: 'dirty', title: '有未儲存變更' }, '●') : null,
+    f.loadError ? el('span', { title: '載入失敗：' + f.loadError }, '⚠') : null,
+    el('button', { class: 'icon-btn', title: '新增條目', onclick: e => { e.stopPropagation(); newEntry(f); } }, '＋'),
+  );
+  /* 點檔案名稱：展開並在右側顯示檔案內容總覽 */
+  hd.addEventListener('click', () => {
+    expandedFiles.add(f.cat + '/' + f.relPath);
+    fileEl.classList.remove('collapsed');
+    selectFile(f);
+  });
+  fileEl.append(hd);
+  const body = el('div', { class: 'body' });
+  for (const k of matched){
+    const active = state.sel && state.sel.file === f && state.sel.key === k;
+    const sub = subLabel(f, k);
+    body.append(el('div', { class: 'tree-entry' + (active ? ' active' : ''), onclick: () => selectEntry(f, k) },
+      el('span', { class: 'k', title: k }, (f.dirtyKeys.has(k) ? '● ' : '') + k),
+      sub ? el('span', { class: 'sub' }, sub) : null));
+  }
+  fileEl.append(body);
+  return fileEl;
+}
+function entryMatches(f, k, q){
+  if (k.toLowerCase().includes(q)) return true;
+  const d = f.data[k];
+  return !!(d && typeof d === 'object' && typeof d.Display === 'string' && d.Display.toLowerCase().includes(q));
+}
+function subLabel(f, k){
+  const d = f.data[k];
+  if (!d || typeof d !== 'object') return '';
+  if (f.cat === 'mobs') return d.Type ? (DB.ENTITY_ZH[String(d.Type).toUpperCase()] || d.Type) : '';
+  if (f.cat === 'items') return d.Id || '';
+  return '';
+}
+
+/* ---------- 選取與編輯器外框 ---------- */
+function showWelcome(){ $('#welcome').style.display = 'flex'; $('#editor').style.display = 'none'; }
+function selectEntry(f, k){
+  state.sel = { file: f, key: k };
+  state.view = 'form';
+  $('#welcome').style.display = 'none'; $('#editor').style.display = 'flex';
+  renderEditorHead(); renderEditorBody(); renderTree();
+}
+/* 選取整個檔案（key = null）：右側顯示檔案總覽 */
+function selectFile(f){
+  state.sel = { file: f, key: null };
+  state.view = 'form';
+  $('#welcome').style.display = 'none'; $('#editor').style.display = 'flex';
+  renderEditorHead(); renderEditorBody(); renderTree();
+}
+function renderEditorHead(){
+  if (!state.sel) return;
+  const { file, key } = state.sel;
+  $('#crumb').textContent = `${DB.CATS[file.cat].icon} ${DB.CATS[file.cat].zh} / ${DB.CATS[file.cat].folder}/${file.relPath}`;
+  const ki = $('#entry-key');
+  const fileMode = key === null;
+  ki.style.display = fileMode ? 'none' : '';
+  $('#btn-del-entry').style.display = fileMode ? 'none' : '';
+  $('#view-tabs').style.display = fileMode ? 'none' : '';
+  let fn = document.getElementById('file-title');
+  if (!fn){ fn = el('div', { id: 'file-title', style: 'font-size:16px;font-weight:700;color:var(--accent2);padding:3px 8px' }); ki.parentNode.append(fn); }
+  fn.style.display = fileMode ? '' : 'none';
+  if (fileMode) fn.textContent = '📄 ' + file.name;
+  else {
+    ki.value = key;
+    ki.style.width = Math.min(320, Math.max(120, key.length * 14 + 30)) + 'px';
+    $$('#view-tabs button').forEach(b => b.classList.toggle('active', b.dataset.v === state.view));
+  }
+  $('#btn-save').textContent = isDirty(file) ? '💾 儲存檔案 ●' : '💾 儲存檔案';
+}
+function renameEntry(newKey){
+  const { file, key } = state.sel;
+  newKey = newKey.trim();
+  if (!newKey || newKey === key) { $('#entry-key').value = key; return; }
+  if (file.data[newKey] !== undefined){ toast('此檔案中已存在同名條目', 'err'); $('#entry-key').value = key; return; }
+  file.data[newKey] = file.data[key];
+  delete file.data[key];
+  file.order[file.order.indexOf(key)] = newKey;
+  file.dirtyKeys.delete(key); file.dirtyKeys.add(newKey);
+  file.deletedKeys.add(key);           // 舊區塊要移除
+  if (file.order.includes(key)) file.order.splice(file.order.indexOf(key), 1);
+  state.sel.key = newKey;
+  renderEditorHead(); renderTree();
+  toast(`已重新命名為「${newKey}」（儲存後生效）`, 'info');
+}
+function newEntry(f){
+  const key = prompt('新條目的內部名稱（英文/中文皆可，不可重複）：');
+  if (!key) return;
+  const k = key.trim();
+  if (!k) return;
+  if (f.data[k] !== undefined){ toast('已存在同名條目', 'err'); return; }
+  const tpl = {
+    mobs: { Type: 'ZOMBIE', Display: '&f新怪物', Health: 20, Damage: 3,
+            Options: { MovementSpeed: 0.25, PreventOtherDrops: true } },
+    items: { Id: 'stone', Display: '&f新物品', Lore: ['&7說明文字'] },
+    skills: { Skills: [] },
+    droptables: { Drops: [] },
+  }[f.cat];
+  f.data[k] = JSON.parse(JSON.stringify(tpl));
+  f.order.push(k);
+  f.dirtyKeys.add(k);
+  expandedFiles.add(f.cat + '/' + f.relPath);
+  selectEntry(f, k); renderCatTabs();
+}
+async function newFile(){
+  if (!state.root){ toast('請先開啟 MythicMobs 資料夾', 'err'); return; }
+  const rel = prompt(`新檔案路徑（相對於 ${DB.CATS[state.cat].folder}/，可含子資料夾）：\n例如 Boss/森林之王.yml`);
+  if (!rel) return;
+  let p = rel.trim().replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!/\.ya?ml$/i.test(p)) p += '.yml';
+  try {
+    let dir = await state.root.getDirectoryHandle(DB.CATS[state.cat].folder, { create: true });
+    const parts = p.split('/');
+    const fname = parts.pop();
+    for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
+    const handle = await dir.getFileHandle(fname, { create: true });
+    const f = { cat: state.cat, relPath: p, name: fname, handle, parentDir: dir,
+                text: '', data: {}, order: [], dirtyKeys: new Set(), deletedKeys: new Set(), loadError: null };
+    state.files[state.cat].push(f);
+    state.files[state.cat].sort((a, b) => a.relPath.localeCompare(b.relPath));
+    expandedFiles.add(f.cat + '/' + f.relPath);
+    selectFile(f);
+    toast(`已建立 ${p}，可直接「＋ 新增條目」或貼上整檔 YAML`, 'ok');
+  } catch (e){ toast('建立檔案失敗：' + e.message, 'err'); }
+}
+function deleteEntry(){
+  const { file, key } = state.sel;
+  if (!confirm(`確定要刪除條目「${key}」？儲存檔案後才會真正寫入。`)) return;
+  file.deletedKeys.add(key);
+  file.dirtyKeys.delete(key);
+  delete file.data[key];
+  const i = file.order.indexOf(key); if (i >= 0) file.order.splice(i, 1);
+  state.sel = null;
+  showWelcome(); renderTree(); renderCatTabs();
+  toast(`已標記刪除「${key}」，儲存檔案後生效`, 'info');
+}
+
+/* ---------- 表單元件 ---------- */
+function section(zh, en, hint, ...kids){
+  const sec = el('div', { class: 'sec' });
+  const hd = el('div', { class: 'sec-hd', onclick: () => sec.classList.toggle('collapsed') },
+    el('span', { class: 'tw' }, '▾'),
+    el('span', { class: 't' }, zh, en ? el('span', { class: 'en' }, en) : null),
+    hint ? el('span', { class: 'hint' }, hint) : null);
+  sec.append(hd, el('div', { class: 'sec-bd' }, ...kids));
+  return sec;
+}
+function frow(zhLabel, enLabel, control, hint){
+  return el('div', { class: 'frow' },
+    el('label', {}, zhLabel, enLabel ? el('span', { class: 'en' }, enLabel) : null),
+    control, hint ? el('span', { class: 'desc-hint' }, hint) : null);
+}
+function bindText(obj, key, opts = {}){
+  const inp = el('input', { type: 'text', value: obj[key] ?? '', placeholder: opts.ph || '', list: opts.list || null });
+  inp.addEventListener('input', () => {
+    const v = inp.value;
+    if (v === '') delete obj[key];
+    else obj[key] = opts.num ? (isNaN(+v) ? v : +v) : v;
+    markDirty();
+  });
+  return inp;
+}
+function bindNum(obj, key, opts = {}){
+  const inp = el('input', { type: 'number', value: obj[key] ?? '', step: opts.step || 'any', placeholder: opts.ph || '' });
+  inp.addEventListener('input', () => {
+    if (inp.value === '') delete obj[key]; else obj[key] = +inp.value;
+    markDirty();
+  });
+  return inp;
+}
+function bindCheck(obj, key){
+  const c = el('input', { type: 'checkbox' }); c.checked = obj[key] === true;
+  c.addEventListener('change', () => { if (c.checked) obj[key] = true; else delete obj[key]; markDirty(); });
+  return c;
+}
+/* 字串清單編輯器（可排序）。getArr/setArr 讓它能繫結到 obj[key] */
+function listEditor(obj, key, opts = {}){
+  const box = el('div', { class: 'list-ed' });
+  const arr = () => (Array.isArray(obj[key]) ? obj[key] : (obj[key] != null ? [String(obj[key])] : []));
+  const commit = a => { if (a.length) obj[key] = a; else delete obj[key]; markDirty(); render(); };
+  function render(){
+    box.innerHTML = '';
+    const a = arr();
+    a.forEach((v, i) => {
+      const inp = el('input', { type: 'text', class: 'main', value: String(v), list: opts.list || null, placeholder: opts.ph || '' });
+      inp.addEventListener('input', () => { const c = arr().slice(); c[i] = inp.value; obj[key] = c; markDirty(); });
+      const row = el('div', { class: 'list-row' },
+        el('span', { class: 'ord' },
+          el('button', { title: '上移', onclick: () => { if (i > 0){ const c = arr().slice(); [c[i-1], c[i]] = [c[i], c[i-1]]; commit(c); } } }, '▲'),
+          el('button', { title: '下移', onclick: () => { const c = arr().slice(); if (i < c.length - 1){ [c[i+1], c[i]] = [c[i], c[i+1]]; commit(c); } } }, '▼')),
+        inp,
+        opts.builder ? el('button', { class: 'icon-btn', title: '視覺化編輯此行', onclick: () => opts.builder(inp.value, nv => { const c = arr().slice(); c[i] = nv; commit(c); }) }, '🛠') : null,
+        el('button', { class: 'icon-btn', title: '刪除', onclick: () => { const c = arr().slice(); c.splice(i, 1); commit(c); } }, '✕'));
+      box.append(row);
+    });
+    const btns = el('div', { class: 'add-line' },
+      el('button', { class: 'btn small', onclick: () => commit([...arr(), opts.newValue || '']) }, '＋ 新增一行'),
+      opts.builder ? el('button', { class: 'btn small', style: 'margin-left:6px', onclick: () => opts.builder('', nv => commit([...arr(), nv])) }, '🛠 用選單新增') : null);
+    box.append(btns);
+  }
+  render();
+  return box;
+}
+/* 鍵值編輯器：繫結到 obj[key]（物件） */
+function kvEditor(obj, key, opts = {}){
+  const box = el('div', { class: 'list-ed' });
+  const ob = () => (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) ? obj[key] : {});
+  function commit(o){ if (Object.keys(o).length) obj[key] = o; else delete obj[key]; markDirty(); render(); }
+  function render(){
+    box.innerHTML = '';
+    for (const [k, v] of Object.entries(ob())){
+      const kin = el('input', { type: 'text', class: 'k', value: k, list: opts.list || null });
+      const isObjVal = v !== null && typeof v === 'object';
+      const vin = el('input', { type: 'text', class: 'v', value: isObjVal ? jsyaml.dump(v, { flowLevel: 0 }).trim() : String(v), disabled: isObjVal ? '' : null,
+                                title: isObjVal ? '巢狀結構請切換到「YAML 原始碼」編輯' : '' });
+      kin.addEventListener('change', () => { const o = { ...ob() }; const val = o[k]; delete o[k]; if (kin.value.trim()) o[kin.value.trim()] = val; commit(o); });
+      vin.addEventListener('input', () => { const o = ob(); o[k] = parseScalar(vin.value); markDirty(); });
+      const hint = opts.hints ? (opts.hints.find(h => h[0] === k) || [])[1] : null;
+      box.append(el('div', { class: 'kv-row' }, kin, vin,
+        el('button', { class: 'icon-btn', title: '刪除', onclick: () => { const o = { ...ob() }; delete o[k]; commit(o); } }, '✕')));
+      if (hint) box.append(el('div', { class: 'desc-hint', style: 'margin-left:4px' }, '↳ ' + hint));
+    }
+    box.append(el('div', { class: 'add-line' },
+      el('button', { class: 'btn small', onclick: () => { const o = { ...ob() }; let n = opts.defaultKey || 'NewKey', i = 1; while (o[n] !== undefined) n = (opts.defaultKey || 'NewKey') + i++; o[n] = opts.defaultVal ?? ''; commit(o); } }, '＋ 新增設定')));
+  }
+  render();
+  return box;
+}
+function parseScalar(v){
+  const s = v.trim();
+  if (s === 'true') return true;
+  if (s === 'false') return false;
+  if (s !== '' && !isNaN(+s) && !/^0[0-9]/.test(s)) return +s;
+  return v;
+}
+function dl(id, values){
+  let d = document.getElementById(id);
+  if (d) return id;
+  d = el('datalist', { id });
+  for (const v of values){
+    if (Array.isArray(v)) d.append(el('option', { value: v[0], label: v[1] }));
+    else d.append(el('option', { value: v }));
+  }
+  document.body.append(d);
+  return id;
+}
+
+/* ---------- 主編輯區 ---------- */
+function renderEditorBody(){
+  const body = $('#editor-body');
+  body.classList.remove('yaml-mode');
+  body.innerHTML = '';
+  if (!state.sel) return;
+  const { file, key } = state.sel;
+  if (key === null){ renderFileView(body, file); return; }
+  const d = file.data[key];
+  if (state.view === 'yaml'){ renderYamlView(body, file, key); return; }
+  if (d === null || typeof d !== 'object' || Array.isArray(d)){
+    body.append(el('div', { class: 'inline-warn' }, '此條目結構特殊，請用「YAML 原始碼」模式編輯。'));
+    return;
+  }
+  const builders = { mobs: buildMobForm, items: buildItemForm, skills: buildSkillForm, droptables: buildDropForm };
+  builders[file.cat](body, d);
+  // 其他未涵蓋欄位
+  const known = KNOWN_KEYS[file.cat];
+  const rest = Object.keys(d).filter(k => !known.includes(k));
+  if (rest.length){
+    const ta = el('textarea', { rows: Math.min(14, rest.length * 3 + 2), spellcheck: 'false' });
+    ta.value = jsyaml.dump(Object.fromEntries(rest.map(k => [k, d[k]])), { indent: 2, lineWidth: -1, noRefs: true });
+    ta.addEventListener('change', () => {
+      try {
+        const o = jsyaml.load(ta.value) || {};
+        for (const k of rest) delete d[k];
+        Object.assign(d, o);
+        markDirty(); toast('進階欄位已更新', 'ok', 1500);
+      } catch (e){ toast('YAML 語法錯誤：' + e.message, 'err', 5000); }
+    });
+    body.append(section('其他欄位（進階）', '', `表單未涵蓋的設定：${rest.join('、')}`, ta,
+      el('div', { class: 'desc-hint' }, '直接以 YAML 編輯，離開輸入框時套用。')));
+  }
+}
+const KNOWN_KEYS = {
+  mobs: ['Type','Display','Health','Damage','Armor','Faction','Equipment','Drops','AIGoalSelectors','AITargetSelectors','Options','DamageModifiers','Skills','KillMessages','LevelModifiers','BossBar','Disguise'],
+  items: ['Id','Material','Display','Lore','Amount','Data','CustomModelData','Model','Type','Enchantments','Hide','Attributes','Options','PotionEffects','Skills'],
+  skills: ['Cooldown','Conditions','TargetConditions','TriggerConditions','Skills'],
+  droptables: ['Conditions','TotalItems','MinItems','MaxItems','Drops'],
+};
+
+/* --- 怪物表單 --- */
+function buildMobForm(body, d){
+  body.append(section('基本屬性', 'Base', '類型、名稱、血量、傷害',
+    (() => {
+      const inp = bindText(d, 'Type', { list: dl('dl-ent', DB.ENTITY_TYPES), ph: 'ZOMBIE' });
+      const zh = el('span', { class: 'desc-hint', style: 'font-size:13px;color:var(--accent2)' },
+                    DB.ENTITY_ZH[String(d.Type || '').toUpperCase()] || '');
+      inp.addEventListener('input', () => { zh.textContent = DB.ENTITY_ZH[inp.value.trim().toUpperCase()] || ''; });
+      return frow('生物類型', 'Type', inp, zh);
+    })(),
+    frow('顯示名稱', 'Display', bindText(d, 'Display', { ph: "&c爆走的礦工" }), '支援 & 色碼與 <#RRGGBB>'),
+    frow('血量', 'Health', bindNum(d, 'Health')),
+    frow('攻擊力', 'Damage', bindNum(d, 'Damage')),
+    frow('護甲', 'Armor', bindNum(d, 'Armor')),
+    frow('陣營', 'Faction', bindText(d, 'Faction', { ph: '選填，搭配 AI 陣營索敵' })),
+  ));
+  body.append(section('裝備', 'Equipment', '格式：物品:部位',
+    listEditor(d, 'Equipment', { ph: 'IRON_PICKAXE:hand', newValue: 'IRON_SWORD:hand' }),
+    el('div', { class: 'desc-hint' }, '部位：hand / offhand / head / chest / legs / feet。物品可用 MM 物品名稱或原版材質。')));
+  body.append(section('掉落物', 'Drops', '格式：物品 數量 機率',
+    listEditor(d, 'Drops', { ph: '物品名稱 1-2 0.5', newValue: '' }),
+    el('div', { class: 'desc-hint' }, '例：「diamond 1-3 0.5」= 50% 掉 1~3 顆鑽石；「exp 10」= 經驗；可用 MM/Crucible 物品名稱或掉落表名稱。')));
+  body.append(section('AI 行為', 'AIGoalSelectors / AITargetSelectors', '通常第 0 順位放 clear',
+    el('div', { class: 'frow' }, el('label', {}, '行為目標', el('span', { class: 'en' }, 'AIGoalSelectors'))),
+    listEditor(d, 'AIGoalSelectors', { ph: '0 clear', newValue: '' }),
+    el('div', { class: 'desc-hint' }, '格式「優先度 行為」。常用：' + DB.AI_GOALS.slice(0, 8).map(g => `${g[0]}（${g[1]}）`).join('、') + '…'),
+    el('div', { class: 'frow', style: 'margin-top:14px' }, el('label', {}, '索敵目標', el('span', { class: 'en' }, 'AITargetSelectors'))),
+    listEditor(d, 'AITargetSelectors', { ph: '0 clear', newValue: '' }),
+    el('div', { class: 'desc-hint' }, '常用：' + DB.AI_TARGETS.slice(0, 7).map(g => `${g[0]}（${g[1]}）`).join('、') + '…')));
+  body.append(section('內部選項', 'Options', '移速、擊退抗性、防掉落…',
+    kvEditor(d, 'Options', { list: dl('dl-mobopt', DB.MOB_OPTIONS), hints: DB.MOB_OPTIONS, defaultKey: 'MovementSpeed', defaultVal: 0.25 })));
+  body.append(section('技能', 'Skills', '此怪物的技能清單',
+    listEditor(d, 'Skills', { ph: 'skill{s=技能名} @self ~onTimer:100', builder: (line, cb) => openSkillLineBuilder(line, cb, 'mob') }),
+    el('div', { class: 'desc-hint' }, '格式：機制{參數} @目標器 ~觸發器 機率。點 🛠 用選單組合。')));
+  body.append(section('傷害修正', 'DamageModifiers', '各類型傷害倍率',
+    listEditor(d, 'DamageModifiers', { ph: 'FIRE 0.5', newValue: '', list: dl('dl-dmg', DB.DAMAGE_CAUSES) }),
+    el('div', { class: 'desc-hint' }, '格式「傷害類型 倍率」：0 = 免疫、0.5 = 減半、2 = 雙倍、-1 = 吸收成治療。')));
+  body.append(section('擊殺訊息', 'KillMessages', '此怪殺死玩家時顯示',
+    listEditor(d, 'KillMessages', { ph: '<target.name> 被擊敗了！' })));
+  body.append(section('等級成長', 'LevelModifiers', '每級增加的屬性',
+    kvEditor(d, 'LevelModifiers', { hints: [['Health','每級增加血量'],['Damage','每級增加傷害'],['Armor','每級增加護甲'],['KnockbackResistance','每級增加擊退抗性'],['Power','每級增加技能威力']], defaultKey: 'Health', defaultVal: 5 })));
+  body.append(section('Boss 血條', 'BossBar', '',
+    kvEditor(d, 'BossBar', { hints: [['Enabled','啟用 true/false'],['Title','血條標題'],['Range','可見距離'],['Color','PINK/BLUE/RED/GREEN/YELLOW/PURPLE/WHITE'],['Style','SOLID/SEGMENTED_6/SEGMENTED_10/SEGMENTED_12/SEGMENTED_20'],['CreateFog','迷霧效果'],['DarkenSky','天空變暗']], defaultKey: 'Enabled', defaultVal: true })));
+  body.append(section('偽裝', 'Disguise', '需安裝 LibsDisguises',
+    frow('偽裝類型', 'Disguise', bindText(d, 'Disguise', { ph: '例：player 或 ZOMBIE' }))));
+}
+
+/* --- 物品表單（MythicMobs / Crucible） --- */
+function buildItemForm(body, d){
+  const idKey = d.Material !== undefined && d.Id === undefined ? 'Material' : 'Id';
+  body.append(section('基本屬性', 'Base', '',
+    frow('材質', idKey, bindText(d, idKey, { list: dl('dl-mat', DB.MATERIALS), ph: 'stone' })),
+    frow('顯示名稱', 'Display', bindText(d, 'Display', { ph: '&f精緻的蠶絲' }), '支援 & 色碼與 <#RRGGBB>'),
+    frow('數量', 'Amount', bindNum(d, 'Amount')),
+    frow('模型資料值', 'CustomModelData', bindNum(d, 'CustomModelData'), '搭配材質包'),
+    frow('物品模型', 'Model', bindText(d, 'Model', { ph: 'namespace:id（1.21.4+ 選填）' })),
+    (() => { const s = el('select', {});
+      for (const t of DB.ITEM_TYPES) s.append(el('option', { value: t }, t || '（一般物品）'));
+      s.value = d.Type || '';
+      s.addEventListener('change', () => { if (s.value) d.Type = s.value; else delete d.Type; markDirty(); });
+      return frow('Crucible 類型', 'Type', s, '家具/自訂方塊用'); })(),
+  ));
+  const loreTa = el('textarea', { rows: 6, spellcheck: 'false', placeholder: '&7每行一句說明文字' });
+  loreTa.value = Array.isArray(d.Lore) ? d.Lore.join('\n') : (d.Lore || '');
+  loreTa.addEventListener('input', () => {
+    const lines = loreTa.value.split('\n');
+    if (loreTa.value.trim() === '') delete d.Lore; else d.Lore = lines;
+    markDirty();
+  });
+  body.append(section('說明文字', 'Lore', '一行一句', loreTa));
+  body.append(section('附魔', 'Enchantments', '格式：附魔:等級',
+    listEditor(d, 'Enchantments', { ph: 'sharpness:5', newValue: 'unbreaking:1', list: dl('dl-ench', DB.ENCHANTS) })));
+  // Hide 旗標核取
+  const hideBox = el('div', { style: 'display:flex;flex-wrap:wrap;gap:12px;padding:4px 0' });
+  for (const flag of DB.HIDE_FLAGS){
+    const c = el('input', { type: 'checkbox' });
+    c.checked = Array.isArray(d.Hide) && d.Hide.includes(flag);
+    c.addEventListener('change', () => {
+      let a = Array.isArray(d.Hide) ? d.Hide.slice() : [];
+      if (c.checked) a.push(flag); else a = a.filter(x => x !== flag);
+      if (a.length) d.Hide = a; else delete d.Hide;
+      markDirty();
+    });
+    hideBox.append(el('label', { style: 'display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--fg-dim)' }, c, flag));
+  }
+  body.append(section('隱藏提示', 'Hide', '隱藏物品提示框中的資訊', hideBox));
+  body.append(section('屬性加成', 'Attributes', '裝備時的屬性', buildAttrEditor(d)));
+  body.append(section('物品選項', 'Options', '無法破壞、顏色、頭顱材質…',
+    kvEditor(d, 'Options', { list: dl('dl-itemopt', DB.ITEM_OPTIONS), hints: DB.ITEM_OPTIONS, defaultKey: 'Unbreakable', defaultVal: true })));
+  body.append(section('藥水效果', 'PotionEffects', '藥水/箭矢/食物用',
+    listEditor(d, 'PotionEffects', { ph: 'POISON 200 1', list: dl('dl-pot', DB.POTION_TYPES) }),
+    el('div', { class: 'desc-hint' }, '格式「效果 持續tick 等級」。')));
+  body.append(section('物品技能', 'Skills', '【Crucible】使用/攻擊/穿戴時觸發',
+    listEditor(d, 'Skills', { ph: 'ignite{ticks=20} @self ~onTimer:20', builder: (line, cb) => openSkillLineBuilder(line, cb, 'item') }),
+    el('div', { class: 'desc-hint' }, '物品技能必須加觸發器（~onUse、~onHit、~onTimer:N…），點 🛠 選擇。')));
+}
+function buildAttrEditor(d){
+  const box = el('div', { class: 'list-ed' });
+  function render(){
+    box.innerHTML = '';
+    const at = d.Attributes && typeof d.Attributes === 'object' ? d.Attributes : {};
+    for (const [slot, attrs] of Object.entries(at)){
+      if (typeof attrs !== 'object' || attrs === null) continue;
+      for (const [an, av] of Object.entries(attrs)){
+        const slotSel = el('select', { class: 'v', style: 'max-width:120px;flex:none' });
+        for (const s of DB.ATTR_SLOTS) slotSel.append(el('option', { value: s }, s));
+        slotSel.value = slot;
+        const attrIn = el('input', { type: 'text', class: 'k', value: an, list: dl('dl-attr', DB.ATTRIBUTES) });
+        const valIn = el('input', { type: 'text', class: 'v', value: String(av), style: 'max-width:130px' });
+        const update = () => {
+          const o = d.Attributes;
+          delete o[slot][an];
+          if (!Object.keys(o[slot]).length) delete o[slot];
+          (o[slotSel.value] ??= {})[attrIn.value.trim() || an] = parseScalar(valIn.value);
+          markDirty(); render();
+        };
+        slotSel.addEventListener('change', update);
+        attrIn.addEventListener('change', update);
+        valIn.addEventListener('input', () => { d.Attributes[slot][an] = parseScalar(valIn.value); markDirty(); });
+        box.append(el('div', { class: 'kv-row' }, slotSel, attrIn, valIn,
+          el('button', { class: 'icon-btn', onclick: () => { delete d.Attributes[slot][an]; if (!Object.keys(d.Attributes[slot]).length) delete d.Attributes[slot]; if (!Object.keys(d.Attributes).length) delete d.Attributes; markDirty(); render(); } }, '✕')));
+      }
+    }
+    box.append(el('div', { class: 'add-line' },
+      el('button', { class: 'btn small', onclick: () => { ((d.Attributes ??= {}).MainHand ??= {}).Damage = 5; markDirty(); render(); } }, '＋ 新增屬性')),
+      el('div', { class: 'desc-hint' }, '例：MainHand + Damage + 10 = 主手持有時攻擊力 +10。數值可用「5」或「5-10」隨機區間。'));
+  }
+  render();
+  return box;
+}
+
+/* --- 技能（Metaskill）表單 --- */
+function buildSkillForm(body, d){
+  body.append(section('基本設定', 'Base', '',
+    frow('冷卻秒數', 'Cooldown', bindNum(d, 'Cooldown'), '單位是秒，不是 tick')));
+  body.append(section('施放條件', 'Conditions', '對施法者檢查',
+    listEditor(d, 'Conditions', { ph: 'targetwithin{d=5} true', builder: openCondBuilder }),
+    el('div', { class: 'desc-hint' }, '格式：條件{參數} true/false。點 🛠 用選單組合。')));
+  body.append(section('目標條件', 'TargetConditions', '逐一過濾技能目標',
+    listEditor(d, 'TargetConditions', { ph: 'isplayer true', builder: openCondBuilder })));
+  body.append(section('觸發者條件', 'TriggerConditions', '對觸發者檢查',
+    listEditor(d, 'TriggerConditions', { ph: 'sneaking false', builder: openCondBuilder })));
+  body.append(section('技能內容', 'Skills', '依序執行',
+    listEditor(d, 'Skills', { ph: 'damage{amount=5} @target', builder: (line, cb) => openSkillLineBuilder(line, cb, 'meta') }),
+    el('div', { class: 'desc-hint' }, '中繼技能內不需要觸發器；用「delay N」做延遲節奏。')));
+}
+
+/* --- 掉落表表單 --- */
+function buildDropForm(body, d){
+  body.append(section('數量設定', 'Settings', '',
+    frow('固定抽取數', 'TotalItems', bindNum(d, 'TotalItems'), '設定後只抽 N 項（與 Min/Max 擇一）'),
+    frow('最少抽取數', 'MinItems', bindNum(d, 'MinItems')),
+    frow('最多抽取數', 'MaxItems', bindNum(d, 'MaxItems'))));
+  body.append(section('掉落內容', 'Drops', '格式：物品 數量 機率',
+    listEditor(d, 'Drops', { ph: '物品名稱 1-2 0.5' }),
+    el('div', { class: 'desc-hint' }, '每行一項：「diamond 1-3 0.5」、「exp 10」、「另一個掉落表名稱 1 1」。機率 0~1。')));
+  body.append(section('掉落條件', 'Conditions', '',
+    listEditor(d, 'Conditions', { ph: 'world{w=world} true', builder: openCondBuilder })));
+}
+
+/* ---------- 檔案總覽視圖（點左側檔案名稱時顯示） ---------- */
+function renderFileView(body, file){
+  const keys = file.order.filter(k => !file.deletedKeys.has(k));
+  if (file.loadError){
+    body.append(el('div', { class: 'inline-warn' },
+      `⚠ 此檔案載入失敗：${file.loadError}`, el('br'),
+      '可在下方「整檔 YAML」修正內容後按「套用」。'));
+  }
+  // 條目清單
+  const entryBox = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;padding:4px 0' });
+  for (const k of keys){
+    const sub = subLabel(file, k);
+    entryBox.append(el('button', { class: 'btn small', onclick: () => selectEntry(file, k) },
+      (file.dirtyKeys.has(k) ? '● ' : '') + k, sub ? el('span', { class: 'chip' }, sub) : null));
+  }
+  if (!keys.length) entryBox.append(el('span', { class: 'muted' }, '此檔案還沒有任何條目。'));
+  body.append(section(`條目清單（${keys.length}）`, 'Entries', '點條目開啟表單編輯器',
+    entryBox,
+    el('div', { class: 'add-line' },
+      el('button', { class: 'btn small primary', onclick: () => newEntry(file) }, '＋ 新增條目'))));
+  // 整檔 YAML 編輯
+  const ta = el('textarea', { rows: 22, spellcheck: 'false',
+    placeholder: '# 這裡是整個檔案的原始內容\n# 可以直接把網路教學的 YAML 貼進來，按「套用」' });
+  ta.value = file.text;
+  const applyBtn = el('button', { class: 'btn primary small', onclick: () => {
+    try {
+      const d = jsyaml.load(ta.value);
+      if (d !== null && (typeof d !== 'object' || Array.isArray(d))) throw new Error('檔案頂層必須是「條目名稱: {...}」結構');
+      file.text = ta.value;
+      file.data = d || {};
+      file.order = Object.keys(file.data);
+      file.dirtyKeys.clear(); file.deletedKeys.clear();
+      file.fullRewrite = true; file.loadError = null;
+      renderEditorHead(); renderEditorBody(); renderTree(); renderCatTabs();
+      toast('✓ 已套用整檔內容（記得儲存檔案）', 'ok');
+    } catch (e){ toast('YAML 語法錯誤：' + e.message, 'err', 6000); }
+  } }, '✓ 套用');
+  body.append(section('整檔 YAML 編輯', 'Raw File', '直接編輯或貼上整個檔案的內容',
+    ta,
+    el('div', { class: 'add-line', style: 'display:flex;gap:8px;align-items:center' },
+      applyBtn,
+      el('button', { class: 'btn small', onclick: () => { ta.value = file.text; } }, '還原'),
+      el('span', { class: 'desc-hint' }, '套用會以此內容取代整個檔案（含註解原樣保留），之後仍需按「儲存檔案」寫入磁碟。'))));
+}
+
+/* ---------- YAML 原始碼視圖 ---------- */
+function renderYamlView(body, file, key){
+  body.classList.add('yaml-mode');
+  const ta = el('textarea', { id: 'yaml-edit', spellcheck: 'false' });
+  ta.value = dumpEntry(key, file.data[key]) + '\n';
+  const msg = el('span', { class: 'msg' }, '直接編輯此條目的 YAML，按「套用」寫回表單（仍需儲存檔案）。');
+  const bar = el('div', { id: 'yaml-bar' }, msg,
+    el('button', { class: 'btn small', onclick: () => { ta.value = dumpEntry(key, file.data[key]) + '\n'; msg.textContent = '已還原為目前資料。'; msg.classList.remove('err'); } }, '還原'),
+    el('button', { class: 'btn primary small', onclick: apply }, '✓ 套用'));
+  function apply(){
+    try {
+      const o = jsyaml.load(ta.value);
+      if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('必須是「條目名稱: {...}」結構');
+      const keys = Object.keys(o);
+      if (keys.length !== 1) throw new Error('一次只能編輯一個條目');
+      const nk = keys[0];
+      if (nk !== key){
+        if (file.data[nk] !== undefined) throw new Error('已存在同名條目：' + nk);
+        file.deletedKeys.add(key); delete file.data[key];
+        file.order[file.order.indexOf(key)] = nk;
+        state.sel.key = nk;
+      }
+      file.data[state.sel.key] = o[nk];
+      file.dirtyKeys.add(state.sel.key);
+      msg.textContent = '✓ 已套用（記得儲存檔案）'; msg.classList.remove('err');
+      renderEditorHead(); renderTree();
+    } catch (e){ msg.textContent = 'YAML 錯誤：' + e.message; msg.classList.add('err'); }
+  }
+  body.append(ta, bar);
+}
+
+/* ---------- 技能行組合器 ---------- */
+function parseSkillLine(line){
+  const r = { mech: '', params: {}, targeter: '', targeterParams: '', trigger: '', rest: '' };
+  line = line.trim().replace(/^-\s*/, '');
+  const dm = line.match(/^delay\s+(\d+)/i);
+  if (dm){ r.mech = 'delay'; r.params.ticks = dm[1]; return r; }
+  const m = line.match(/^([\w:]+)(\{([^}]*)\})?/);
+  if (!m) return r;
+  r.mech = m[1];
+  if (m[3]) for (const kv of m[3].split(';')){ const i = kv.indexOf('='); if (i > 0) r.params[kv.slice(0, i).trim()] = kv.slice(i + 1).trim(); }
+  let rest = line.slice(m[0].length).trim();
+  const tm = rest.match(/@([\w]+)(\{([^}]*)\})?/);
+  if (tm){ r.targeter = '@' + tm[1]; r.targeterParams = tm[3] || ''; rest = (rest.slice(0, tm.index) + rest.slice(tm.index + tm[0].length)).trim(); }
+  const gm = rest.match(/~\w+(:[^\s]+)?/);
+  if (gm){ r.trigger = gm[0]; rest = (rest.slice(0, gm.index) + rest.slice(gm.index + gm[0].length)).trim(); }
+  r.rest = rest;
+  return r;
+}
+function openSkillLineBuilder(line, cb, scope){
+  const init = parseSkillLine(line || '');
+  let selMech = DB.MECHANICS.find(m => m.n === init.mech) || null;
+  const paramVals = { ...init.params };
+  let targeter = init.targeter, targeterParams = init.targeterParams, trigger = init.trigger, rest = init.rest;
+
+  const listBox = el('div', { class: 'pick-list' });
+  const rightBox = el('div', {});
+  const preview = el('span', { class: 'preview' });
+  const searchIn = el('input', { type: 'text', placeholder: '搜尋機制（中英文皆可）…', style: 'width:100%;margin-bottom:8px' });
+
+  function compose(){
+    if (!selMech) return '';
+    if (selMech.n === 'delay') return `delay ${paramVals.ticks || 20}`;
+    const ps = Object.entries(paramVals).filter(([, v]) => String(v).trim() !== '').map(([k, v]) => `${k}=${v}`).join(';');
+    let s = selMech.n + (ps ? `{${ps}}` : '');
+    if (targeter) s += ' ' + targeter + (targeterParams ? `{${targeterParams}}` : '');
+    if (trigger) s += ' ' + trigger;
+    if (rest) s += ' ' + rest;
+    return s;
+  }
+  const refreshPreview = () => { preview.textContent = compose() || '（尚未選擇機制）'; };
+
+  function renderList(){
+    const q = searchIn.value.trim().toLowerCase();
+    listBox.innerHTML = '';
+    for (const m of DB.MECHANICS){
+      if (q && !m.n.toLowerCase().includes(q) && !m.zh.includes(q) && !m.d.includes(q)) continue;
+      const item = el('div', { class: 'pi' + (selMech === m ? ' sel' : ''), onclick: () => { selMech = m; for (const k of Object.keys(paramVals)) delete paramVals[k]; renderList(); renderRight(); refreshPreview(); } },
+        m.n, el('span', { class: 'zh' }, m.zh + ' — ' + m.d.slice(0, 26)));
+      listBox.append(item);
+    }
+  }
+  function renderRight(){
+    rightBox.innerHTML = '';
+    if (!selMech){ rightBox.append(el('div', { class: 'mech-desc' }, '← 從左側選擇一個機制')); return; }
+    rightBox.append(el('div', { class: 'mech-desc' }, el('b', {}, `${selMech.n}（${selMech.zh}）`), el('br'), selMech.d));
+    if (selMech.p && selMech.p.length){
+      const tbl = el('table', { class: 'param-tbl' });
+      for (const [pk, ph] of selMech.p){
+        const inp = el('input', { type: 'text', value: paramVals[pk] ?? '' });
+        inp.addEventListener('input', () => { if (inp.value === '') delete paramVals[pk]; else paramVals[pk] = inp.value; refreshPreview(); });
+        tbl.append(el('tr', {}, el('td', { class: 'pk' }, pk), el('td', {}, inp), el('td', { class: 'ph' }, ph)));
+      }
+      rightBox.append(tbl);
+    }
+    if (selMech.n !== 'delay'){
+      // 目標器
+      const tgSel = el('select', {});
+      tgSel.append(el('option', { value: '' }, '（不指定目標器）'));
+      for (const t of DB.TARGETERS) tgSel.append(el('option', { value: t.n }, `${t.n} — ${t.zh}`));
+      tgSel.value = DB.TARGETERS.some(t => t.n === targeter) ? targeter : (targeter ? '' : targeter);
+      if (targeter && ![...tgSel.options].some(o => o.value === targeter)) { tgSel.append(el('option', { value: targeter }, targeter)); tgSel.value = targeter; }
+      const tgParamsIn = el('input', { type: 'text', value: targeterParams, placeholder: '目標器參數，如 r=10', style: 'flex:1' });
+      tgSel.addEventListener('change', () => { targeter = tgSel.value; const def = DB.TARGETERS.find(t => t.n === targeter); tgHint.textContent = def && def.p ? '參數：' + def.p.map(p => `${p[0]}（${p[1]}）`).join('、') : ''; refreshPreview(); });
+      tgParamsIn.addEventListener('input', () => { targeterParams = tgParamsIn.value; refreshPreview(); });
+      const tgHint = el('div', { class: 'desc-hint' });
+      const curT = DB.TARGETERS.find(t => t.n === targeter);
+      if (curT && curT.p) tgHint.textContent = '參數：' + curT.p.map(p => `${p[0]}（${p[1]}）`).join('、');
+      rightBox.append(el('div', { class: 'frow', style: 'margin-top:14px' }, el('label', {}, '目標器', el('span', { class: 'en' }, '@Targeter')), tgSel, tgParamsIn), tgHint);
+      // 觸發器
+      if (scope !== 'meta'){
+        const trSel = el('select', {});
+        trSel.append(el('option', { value: '' }, '（不指定觸發器）'));
+        for (const t of DB.TRIGGERS){ if (t.s === 'both' || t.s === scope) trSel.append(el('option', { value: t.n }, `${t.n} — ${t.zh}`)); }
+        const trIn = el('input', { type: 'text', value: trigger, placeholder: '或手動輸入，如 ~onTimer:100', style: 'flex:1' });
+        trSel.addEventListener('change', () => { if (trSel.value){ trigger = trSel.value; trIn.value = trigger; refreshPreview(); } });
+        trIn.addEventListener('input', () => { trigger = trIn.value.trim(); refreshPreview(); });
+        rightBox.append(el('div', { class: 'frow' }, el('label', {}, '觸發器', el('span', { class: 'en' }, '~Trigger')), trSel, trIn));
+      }
+      const restIn = el('input', { type: 'text', value: rest, placeholder: '例：0.5（機率）或 ?condition{...}', style: 'flex:1' });
+      restIn.addEventListener('input', () => { rest = restIn.value.trim(); refreshPreview(); });
+      rightBox.append(el('div', { class: 'frow' }, el('label', {}, '附加內容', el('span', { class: 'en' }, 'chance / ?cond')), restIn));
+    }
+  }
+  searchIn.addEventListener('input', renderList);
+  renderList(); renderRight(); refreshPreview();
+  openModal('🛠 技能行組合器', el('div', { class: 'pick-grid' }, el('div', {}, searchIn, listBox), rightBox),
+    [ preview,
+      el('button', { class: 'btn', onclick: closeModal }, '取消'),
+      el('button', { class: 'btn primary', onclick: () => { const s = compose(); if (!s){ toast('請先選擇機制', 'err'); return; } cb(s); closeModal(); } }, '✓ 插入此行') ]);
+}
+
+/* ---------- 條件組合器 ---------- */
+function openCondBuilder(line, cb){
+  const m = (line || '').trim().match(/^([\w]+)(\{([^}]*)\})?\s*(.*)$/);
+  let selCond = m ? DB.CONDITIONS.find(c => c.n === m[1]) || null : null;
+  let params = m && m[3] ? m[3] : '';
+  let action = m && m[4] ? m[4] : 'true';
+  const listBox = el('div', { class: 'pick-list' });
+  const rightBox = el('div', {});
+  const preview = el('span', { class: 'preview' });
+  const searchIn = el('input', { type: 'text', placeholder: '搜尋條件…', style: 'width:100%;margin-bottom:8px' });
+  const compose = () => selCond ? `${selCond.n}${params.trim() ? `{${params}}` : ''} ${action}`.trim() : '';
+  const refresh = () => { preview.textContent = compose() || '（尚未選擇條件）'; };
+  function renderList(){
+    const q = searchIn.value.trim().toLowerCase();
+    listBox.innerHTML = '';
+    for (const c of DB.CONDITIONS){
+      if (q && !c.n.includes(q) && !c.zh.includes(q)) continue;
+      listBox.append(el('div', { class: 'pi' + (selCond === c ? ' sel' : ''), onclick: () => { selCond = c; params = ''; renderList(); renderRight(); refresh(); } },
+        c.n, el('span', { class: 'zh' }, c.zh)));
+    }
+  }
+  function renderRight(){
+    rightBox.innerHTML = '';
+    if (!selCond){ rightBox.append(el('div', { class: 'mech-desc' }, '← 從左側選擇一個條件')); return; }
+    rightBox.append(el('div', { class: 'mech-desc' }, el('b', {}, `${selCond.n}（${selCond.zh}）`), el('br'), selCond.d || ''));
+    const pIn = el('input', { type: 'text', value: params, placeholder: selCond.p && selCond.p.length ? selCond.p.map(p => `${p[0]}=…`).join(';') : '（此條件不需參數）', style: 'width:100%' });
+    pIn.addEventListener('input', () => { params = pIn.value; refresh(); });
+    rightBox.append(el('div', { class: 'frow' }, el('label', {}, '參數'), pIn));
+    if (selCond.p && selCond.p.length) rightBox.append(el('div', { class: 'desc-hint' }, selCond.p.map(p => `${p[0]}：${p[1]}`).join('　')));
+    const aSel = el('select', {});
+    for (const a of ['true', 'false', 'cancel', 'power 2']) aSel.append(el('option', { value: a }, a));
+    if (![...aSel.options].some(o => o.value === action)) aSel.append(el('option', { value: action }, action));
+    aSel.value = action;
+    aSel.addEventListener('change', () => { action = aSel.value; refresh(); });
+    rightBox.append(el('div', { class: 'frow' }, el('label', {}, '判定方式'), aSel),
+      el('div', { class: 'desc-hint' }, 'true = 條件成立才執行；false = 條件不成立才執行。'));
+  }
+  searchIn.addEventListener('input', renderList);
+  renderList(); renderRight(); refresh();
+  openModal('🛠 條件組合器', el('div', { class: 'pick-grid' }, el('div', {}, searchIn, listBox), rightBox),
+    [ preview,
+      el('button', { class: 'btn', onclick: closeModal }, '取消'),
+      el('button', { class: 'btn primary', onclick: () => { const s = compose(); if (!s){ toast('請先選擇條件', 'err'); return; } cb(s); closeModal(); } }, '✓ 插入') ]);
+}
+
+/* ---------- 彈窗 ---------- */
+function openModal(title, bodyEl, footEls){
+  const root = $('#modal-root');
+  root.innerHTML = '';
+  root.append(el('div', { class: 'modal' },
+    el('div', { class: 'm-hd' }, el('span', { class: 't' }, title), el('button', { class: 'icon-btn', onclick: closeModal }, '✕')),
+    el('div', { class: 'm-bd' }, bodyEl),
+    el('div', { class: 'm-ft' }, ...footEls)));
+  root.classList.add('show');
+}
+function closeModal(){ $('#modal-root').classList.remove('show'); $('#modal-root').innerHTML = ''; }
+
+/* ---------- 事件繫結 ---------- */
+$('#btn-open').addEventListener('click', openFolder);
+$('#btn-reload').addEventListener('click', async () => {
+  if (anyDirty() && !confirm('有未儲存的變更，重新載入將會遺失，確定？')) return;
+  await loadAll();
+});
+$('#btn-newfile').addEventListener('click', newFile);
+$('#btn-save').addEventListener('click', () => state.sel && saveFile(state.sel.file));
+$('#btn-del-entry').addEventListener('click', () => state.sel && deleteEntry());
+$('#entry-key').addEventListener('change', e => renameEntry(e.target.value));
+$('#search').addEventListener('input', debounce(e => { state.search = e.target.value; renderTree(); }, 150));
+$$('#view-tabs button').forEach(b => b.addEventListener('click', () => {
+  state.view = b.dataset.v; renderEditorHead(); renderEditorBody();
+}));
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); if (state.sel) saveFile(state.sel.file); }
+});
+window.addEventListener('beforeunload', e => { if (anyDirty()){ e.preventDefault(); e.returnValue = ''; } });
+
+/* 啟動：嘗試還原上次的資料夾 */
+(async () => {
+  renderCatTabs(); renderTree();
+  try {
+    const h = await idb.get('root');
+    if (h){
+      const q = await h.queryPermission({ mode: 'readwrite' });
+      if (q === 'granted'){ await useRoot(h); }
+      else {
+        const btn = $('#btn-open');
+        btn.textContent = '📂 重新連接 ' + h.name;
+        const once = async (e) => {
+          e.stopImmediatePropagation();
+          try {
+            if (await h.requestPermission({ mode: 'readwrite' }) === 'granted'){ await useRoot(h); await idb.set('root', h); }
+            else await openFolder();
+          } catch { await openFolder(); }
+        };
+        btn.addEventListener('click', once, { capture: true, once: true });
+      }
+    }
+  } catch {}
+})();
+
+</script>
+</body>
+</html>
